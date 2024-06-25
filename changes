@@ -1,5 +1,5 @@
 diff --git a/arguments/__init__.py b/arguments/__init__.py
-index 1e13a55..b76fbd7 100644
+index 1e13a55..4dbccfb 100644
 --- a/arguments/__init__.py
 +++ b/arguments/__init__.py
 @@ -63,6 +63,7 @@ class ModelParams(ParamGroup):
@@ -19,6 +19,14 @@ index 1e13a55..b76fbd7 100644
          self.scaling_lr = 0.005
          self.rotation_lr = 0.001
          self.percent_dense = 0.01
+@@ -87,6 +88,7 @@ class OptimizationParams(ParamGroup):
+         self.densify_until_iter = 15_000
+         self.densify_grad_threshold = 0.0002
+         self.random_background = False
++        self.optimizer_type = "sparse_adam"
+         super().__init__(parser, "Optimization Parameters")
+ 
+ def get_combined_args(parser : ArgumentParser):
 diff --git a/environment.yml b/environment.yml
 index d479ec7..40f700c 100644
 --- a/environment.yml
@@ -93,10 +101,33 @@ index f74e336..27d027a 100644
 +            "visibility_filter" : (radii > 0).nonzero(),
              "radii": radii}
 diff --git a/scene/gaussian_model.py b/scene/gaussian_model.py
-index 632a1e8..99716af 100644
+index 632a1e8..4641562 100644
 --- a/scene/gaussian_model.py
 +++ b/scene/gaussian_model.py
-@@ -110,6 +110,14 @@ class GaussianModel:
+@@ -21,6 +21,11 @@ from simple_knn._C import distCUDA2
+ from utils.graphics_utils import BasicPointCloud
+ from utils.general_utils import strip_symmetric, build_scaling_rotation
+ 
++try:
++    from diff_gaussian_rasterization import SparseGaussianAdam
++except:
++    pass
++
+ class GaussianModel:
+ 
+     def setup_functions(self):
+@@ -41,8 +46,9 @@ class GaussianModel:
+         self.rotation_activation = torch.nn.functional.normalize
+ 
+ 
+-    def __init__(self, sh_degree : int):
++    def __init__(self, sh_degree, optimizer_type="default"):
+         self.active_sh_degree = 0
++        self.optimizer_type = optimizer_type
+         self.max_sh_degree = sh_degree  
+         self._xyz = torch.empty(0)
+         self._features_dc = torch.empty(0)
+@@ -110,6 +116,14 @@ class GaussianModel:
          features_rest = self._features_rest
          return torch.cat((features_dc, features_rest), dim=1)
      
@@ -111,7 +142,7 @@ index 632a1e8..99716af 100644
      @property
      def get_opacity(self):
          return self.opacity_activation(self._opacity)
-@@ -136,7 +144,7 @@ class GaussianModel:
+@@ -136,7 +150,7 @@ class GaussianModel:
          rots = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")
          rots[:, 0] = 1
  
@@ -120,7 +151,19 @@ index 632a1e8..99716af 100644
  
          self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
          self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
-@@ -208,7 +216,7 @@ class GaussianModel:
+@@ -160,7 +174,10 @@ class GaussianModel:
+             {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+         ]
+ 
+-        self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
++        if self.optimizer_type == "default":
++            self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
++        elif self.optimizer_type == "sparse_adam":
++            self.optimizer = SparseGaussianAdam(l, lr=0.0, eps=1e-15)
+         self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
+                                                     lr_final=training_args.position_lr_final*self.spatial_lr_scale,
+                                                     lr_delay_mult=training_args.position_lr_delay_mult,
+@@ -208,7 +225,7 @@ class GaussianModel:
          PlyData([el]).write(path)
  
      def reset_opacity(self):
@@ -129,7 +172,7 @@ index 632a1e8..99716af 100644
          optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
          self._opacity = optimizable_tensors["opacity"]
  
-@@ -303,6 +311,7 @@ class GaussianModel:
+@@ -303,6 +320,7 @@ class GaussianModel:
  
          self.denom = self.denom[valid_points_mask]
          self.max_radii2D = self.max_radii2D[valid_points_mask]
@@ -137,7 +180,7 @@ index 632a1e8..99716af 100644
  
      def cat_tensors_to_optimizer(self, tensors_dict):
          optimizable_tensors = {}
-@@ -326,7 +335,7 @@ class GaussianModel:
+@@ -326,7 +344,7 @@ class GaussianModel:
  
          return optimizable_tensors
  
@@ -146,7 +189,7 @@ index 632a1e8..99716af 100644
          d = {"xyz": new_xyz,
          "f_dc": new_features_dc,
          "f_rest": new_features_rest,
-@@ -342,6 +351,7 @@ class GaussianModel:
+@@ -342,6 +360,7 @@ class GaussianModel:
          self._scaling = optimizable_tensors["scaling"]
          self._rotation = optimizable_tensors["rotation"]
  
@@ -154,7 +197,7 @@ index 632a1e8..99716af 100644
          self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
          self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
          self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
-@@ -365,8 +375,9 @@ class GaussianModel:
+@@ -365,8 +384,9 @@ class GaussianModel:
          new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
          new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
          new_opacity = self._opacity[selected_pts_mask].repeat(N,1)
@@ -165,7 +208,7 @@ index 632a1e8..99716af 100644
  
          prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
          self.prune_points(prune_filter)
-@@ -384,12 +395,15 @@ class GaussianModel:
+@@ -384,12 +404,15 @@ class GaussianModel:
          new_scaling = self._scaling[selected_pts_mask]
          new_rotation = self._rotation[selected_pts_mask]
  
@@ -183,7 +226,7 @@ index 632a1e8..99716af 100644
          self.densify_and_clone(grads, max_grad, extent)
          self.densify_and_split(grads, max_grad, extent)
  
-@@ -399,6 +413,8 @@ class GaussianModel:
+@@ -399,6 +422,8 @@ class GaussianModel:
              big_points_ws = self.get_scaling.max(dim=1).values > 0.1 * extent
              prune_mask = torch.logical_or(torch.logical_or(prune_mask, big_points_vs), big_points_ws)
          self.prune_points(prune_mask)
@@ -1393,6 +1436,113 @@ index 0000000..4270539
 +
 +    return dL_dimg1;
 +}
+\ No newline at end of file
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.cu b/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.cu
+new file mode 100644
+index 0000000..cc7aa3a
+--- /dev/null
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.cu
+@@ -0,0 +1,67 @@
++#include "auxiliary.h"
++#include "adam.h"
++#include <cooperative_groups.h>
++#include <cooperative_groups/reduce.h>
++namespace cg = cooperative_groups;
++
++// step on a grid of size (N, M)
++// N is always number of gaussians
++__global__
++void adamUpdateCUDA(
++    float* __restrict__ param,
++    const float* __restrict__ param_grad,
++    float* __restrict__ exp_avg,
++    float* __restrict__ exp_avg_sq,
++    const bool* tiles_touched,
++    const float lr,
++    const float b1,
++    const float b2,
++    const float eps,
++    const uint32_t N,
++    const uint32_t M) {
++
++	auto p_idx = cg::this_grid().thread_rank();
++    const uint32_t g_idx = p_idx / M;
++    if (g_idx >= N) return;
++    if (tiles_touched[g_idx]) {
++        float Register_param_grad = param_grad[p_idx];
++        float Register_exp_avg = exp_avg[p_idx];
++        float Register_exp_avg_sq = exp_avg_sq[p_idx];
++        Register_exp_avg = b1 * Register_exp_avg + (1.0f - b1) * Register_param_grad;
++        Register_exp_avg_sq = b2 * Register_exp_avg_sq + (1.0f - b2) * Register_param_grad * Register_param_grad;
++        float step = -lr * Register_exp_avg / (sqrt(Register_exp_avg_sq) + eps);
++
++        param[p_idx] += step;
++        exp_avg[p_idx] = Register_exp_avg;
++        exp_avg_sq[p_idx] = Register_exp_avg_sq;
++    }
++}
++
++void ADAM::adamUpdate(
++    float* param,
++    const float* param_grad,
++    float* exp_avg,
++    float* exp_avg_sq,
++    const bool* tiles_touched,
++    const float lr,
++    const float b1,
++    const float b2,
++    const float eps,
++    const uint32_t N,
++    const uint32_t M) {
++
++    const uint32_t cnt = N * M;
++    adamUpdateCUDA<<<(cnt + 255) / 256, 256>>> (
++        param,
++        param_grad,
++        exp_avg,
++        exp_avg_sq,
++        tiles_touched,
++        lr,
++        b1,
++        b2,
++        eps,
++        N,
++        M
++    );
++}
+\ No newline at end of file
+diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.h b/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.h
+new file mode 100644
+index 0000000..648fb16
+--- /dev/null
++++ b/submodules/diff-gaussian-rasterization/cuda_rasterizer/adam.h
+@@ -0,0 +1,26 @@
++#ifndef CUDA_RASTERIZER_ADAM_H_INCLUDED
++#define CUDA_RASTERIZER_ADAM_H_INCLUDED
++
++#include <cuda.h>
++#include "cuda_runtime.h"
++#include "device_launch_parameters.h"
++#define GLM_FORCE_CUDA
++#include <glm/glm.hpp>
++
++namespace ADAM {
++
++void adamUpdate(
++    float* param,
++    const float* param_grad,
++    float* exp_avg,
++    float* exp_avg_sq,
++    const bool* tiles_touched,
++    const float lr,
++    const float b1,
++    const float b2,
++    const float eps,
++    const uint32_t N,
++    const uint32_t M);
++}
++
++#endif
 \ No newline at end of file
 diff --git a/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h b/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h
 index 4d4b9b7..0e12b46 100644
@@ -2683,7 +2833,7 @@ index bc3f0ec..2370948 100644
  	size_t required(size_t P)
  	{
 diff --git a/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py b/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py
-index bbef37d..de71745 100644
+index bbef37d..51551a7 100644
 --- a/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py
 +++ b/submodules/diff-gaussian-rasterization/diff_gaussian_rasterization/__init__.py
 @@ -21,6 +21,7 @@ def cpu_deep_copy_tuple(input_tuple):
@@ -2820,7 +2970,7 @@ index bbef37d..de71745 100644
          if shs is None:
              shs = torch.Tensor([])
          if colors_precomp is None:
-@@ -210,12 +223,13 @@ class GaussianRasterizer(nn.Module):
+@@ -210,12 +223,41 @@ class GaussianRasterizer(nn.Module):
          return rasterize_gaussians(
              means3D,
              means2D,
@@ -2835,23 +2985,61 @@ index bbef37d..de71745 100644
 +            raster_settings
          )
  
++class SparseGaussianAdam(torch.optim.Adam):
++    def __init__(self, params, lr, eps):
++        super().__init__(params=params, lr=lr, eps=eps)
++    
++    @torch.no_grad()
++    def step(self, visibility, N):
++        for group in self.param_groups:
++            lr = group["lr"]
++            eps = group["eps"]
++
++            assert len(group["params"]) == 1, "more than one tensor in group"
++            param = group["params"][0]
++            if param.grad is None:
++                continue
++
++            # Lazy state initialization
++            state = self.state[param]
++            if len(state) == 0:
++                state['step'] = torch.tensor(0.0, dtype=torch.float32)
++                state['exp_avg'] = torch.zeros_like(param, memory_format=torch.preserve_format)
++                state['exp_avg_sq'] = torch.zeros_like(param, memory_format=torch.preserve_format)
++
++
++            stored_state = self.state.get(param, None)
++            exp_avg = stored_state["exp_avg"]
++            exp_avg_sq = stored_state["exp_avg_sq"]
++            M = param.numel() // N
++            _C.adamUpdate(param, param.grad, exp_avg, exp_avg_sq, visibility, lr, 0.9, 0.999, eps, N, M)
+\ No newline at end of file
 diff --git a/submodules/diff-gaussian-rasterization/ext.cpp b/submodules/diff-gaussian-rasterization/ext.cpp
-index d768779..56f377f 100644
+index d768779..4d00b5e 100644
 --- a/submodules/diff-gaussian-rasterization/ext.cpp
 +++ b/submodules/diff-gaussian-rasterization/ext.cpp
-@@ -16,4 +16,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+@@ -16,4 +16,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
    m.def("rasterize_gaussians", &RasterizeGaussiansCUDA);
    m.def("rasterize_gaussians_backward", &RasterizeGaussiansBackwardCUDA);
    m.def("mark_visible", &markVisible);
++  m.def("adamUpdate", &adamUpdate);
 +  m.def("fusedssim", &fusedssim);
 +  m.def("fusedssim_backward", &fusedssim_backward);
  }
 \ No newline at end of file
 diff --git a/submodules/diff-gaussian-rasterization/rasterize_points.cu b/submodules/diff-gaussian-rasterization/rasterize_points.cu
-index ddc5cf8..101d3b4 100644
+index ddc5cf8..8a98f51 100644
 --- a/submodules/diff-gaussian-rasterization/rasterize_points.cu
 +++ b/submodules/diff-gaussian-rasterization/rasterize_points.cu
-@@ -32,7 +32,23 @@ std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
+@@ -20,6 +20,7 @@
+ #include <memory>
+ #include "cuda_rasterizer/config.h"
+ #include "cuda_rasterizer/rasterizer.h"
++#include "cuda_rasterizer/adam.h"
+ #include <fstream>
+ #include <string>
+ #include <functional>
+@@ -32,7 +33,23 @@ std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
      return lambda;
  }
  
@@ -2876,7 +3064,7 @@ index ddc5cf8..101d3b4 100644
  RasterizeGaussiansCUDA(
  	const torch::Tensor& background,
  	const torch::Tensor& means3D,
-@@ -48,6 +64,7 @@ RasterizeGaussiansCUDA(
+@@ -48,6 +65,7 @@ RasterizeGaussiansCUDA(
  	const float tan_fovy,
      const int image_height,
      const int image_width,
@@ -2884,7 +3072,7 @@ index ddc5cf8..101d3b4 100644
  	const torch::Tensor& sh,
  	const int degree,
  	const torch::Tensor& campos,
-@@ -65,7 +82,7 @@ RasterizeGaussiansCUDA(
+@@ -65,7 +83,7 @@ RasterizeGaussiansCUDA(
    auto int_opts = means3D.options().dtype(torch::kInt32);
    auto float_opts = means3D.options().dtype(torch::kFloat32);
  
@@ -2893,7 +3081,7 @@ index ddc5cf8..101d3b4 100644
    torch::Tensor radii = torch::full({P}, 0, means3D.options().dtype(torch::kInt32));
    
    torch::Device device(torch::kCUDA);
-@@ -73,11 +90,14 @@ RasterizeGaussiansCUDA(
+@@ -73,11 +91,14 @@ RasterizeGaussiansCUDA(
    torch::Tensor geomBuffer = torch::empty({0}, options.device(device));
    torch::Tensor binningBuffer = torch::empty({0}, options.device(device));
    torch::Tensor imgBuffer = torch::empty({0}, options.device(device));
@@ -2908,7 +3096,7 @@ index ddc5cf8..101d3b4 100644
    if(P != 0)
    {
  	  int M = 0;
-@@ -86,14 +106,16 @@ RasterizeGaussiansCUDA(
+@@ -86,14 +107,16 @@ RasterizeGaussiansCUDA(
  		M = sh.size(1);
        }
  
@@ -2926,7 +3114,7 @@ index ddc5cf8..101d3b4 100644
  		sh.contiguous().data_ptr<float>(),
  		colors.contiguous().data<float>(), 
  		opacity.contiguous().data<float>(), 
-@@ -110,11 +132,14 @@ RasterizeGaussiansCUDA(
+@@ -110,11 +133,14 @@ RasterizeGaussiansCUDA(
  		out_color.contiguous().data<float>(),
  		radii.contiguous().data<int>(),
  		debug);
@@ -2943,7 +3131,7 @@ index ddc5cf8..101d3b4 100644
   RasterizeGaussiansBackwardCUDA(
   	const torch::Tensor& background,
  	const torch::Tensor& means3D,
-@@ -129,6 +154,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -129,6 +155,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  	const float tan_fovx,
  	const float tan_fovy,
      const torch::Tensor& dL_dout_color,
@@ -2951,7 +3139,7 @@ index ddc5cf8..101d3b4 100644
  	const torch::Tensor& sh,
  	const int degree,
  	const torch::Tensor& campos,
-@@ -136,6 +162,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -136,6 +163,8 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  	const int R,
  	const torch::Tensor& binningBuffer,
  	const torch::Tensor& imageBuffer,
@@ -2960,7 +3148,7 @@ index ddc5cf8..101d3b4 100644
  	const bool debug) 
  {
    const int P = means3D.size(0);
-@@ -150,20 +178,22 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -150,20 +179,22 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  
    torch::Tensor dL_dmeans3D = torch::zeros({P, 3}, means3D.options());
    torch::Tensor dL_dmeans2D = torch::zeros({P, 3}, means3D.options());
@@ -2985,7 +3173,7 @@ index ddc5cf8..101d3b4 100644
  	  sh.contiguous().data<float>(),
  	  colors.contiguous().data<float>(),
  	  scales.data_ptr<float>(),
-@@ -179,6 +209,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -179,6 +210,7 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  	  reinterpret_cast<char*>(geomBuffer.contiguous().data_ptr()),
  	  reinterpret_cast<char*>(binningBuffer.contiguous().data_ptr()),
  	  reinterpret_cast<char*>(imageBuffer.contiguous().data_ptr()),
@@ -2993,7 +3181,7 @@ index ddc5cf8..101d3b4 100644
  	  dL_dout_color.contiguous().data<float>(),
  	  dL_dmeans2D.contiguous().data<float>(),
  	  dL_dconic.contiguous().data<float>(),  
-@@ -186,13 +217,14 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -186,13 +218,14 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  	  dL_dcolors.contiguous().data<float>(),
  	  dL_dmeans3D.contiguous().data<float>(),
  	  dL_dcov3D.contiguous().data<float>(),
@@ -3009,8 +3197,41 @@ index ddc5cf8..101d3b4 100644
  }
  
  torch::Tensor markVisible(
+@@ -214,4 +247,31 @@ torch::Tensor markVisible(
+   }
+   
+   return present;
++}
++
++void adamUpdate(
++	torch::Tensor &param,
++	torch::Tensor &param_grad,
++	torch::Tensor &exp_avg,
++	torch::Tensor &exp_avg_sq,
++	torch::Tensor &visible,
++	const float lr,
++	const float b1,
++	const float b2,
++	const float eps,
++	const uint32_t N,
++	const uint32_t M
++){
++	ADAM::adamUpdate(
++		param.contiguous().data<float>(),
++		param_grad.contiguous().data<float>(),
++		exp_avg.contiguous().data<float>(),
++		exp_avg_sq.contiguous().data<float>(),
++		visible.contiguous().data<bool>(),
++		lr,
++		b1,
++		b2,
++		eps,
++		N,
++		M);
+ }
+\ No newline at end of file
 diff --git a/submodules/diff-gaussian-rasterization/rasterize_points.h b/submodules/diff-gaussian-rasterization/rasterize_points.h
-index 9023d99..75d083b 100644
+index 9023d99..48da910 100644
 --- a/submodules/diff-gaussian-rasterization/rasterize_points.h
 +++ b/submodules/diff-gaussian-rasterization/rasterize_points.h
 @@ -15,7 +15,7 @@
@@ -3046,7 +3267,7 @@ index 9023d99..75d083b 100644
  	const torch::Tensor& sh,
  	const int degree,
  	const torch::Tensor& campos,
-@@ -59,9 +61,28 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
+@@ -59,9 +61,42 @@ std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Te
  	const int R,
  	const torch::Tensor& binningBuffer,
  	const torch::Tensor& imageBuffer,
@@ -3061,6 +3282,20 @@ index 9023d99..75d083b 100644
 \ No newline at end of file
 +		torch::Tensor& projmatrix);
 +
++void adamUpdate(
++	torch::Tensor &param,
++	torch::Tensor &param_grad,
++	torch::Tensor &exp_avg,
++	torch::Tensor &exp_avg_sq,
++	torch::Tensor &visible,
++	const float lr,
++	const float b1,
++	const float b2,
++	const float eps,
++	const uint32_t N,
++	const uint32_t M
++);
++	
 +torch::Tensor
 +fusedssim(
 +    float C1,
@@ -3079,19 +3314,21 @@ index 9023d99..75d083b 100644
 +);
 \ No newline at end of file
 diff --git a/submodules/diff-gaussian-rasterization/setup.py b/submodules/diff-gaussian-rasterization/setup.py
-index bb7220d..60ad568 100644
+index bb7220d..9a7c4f5 100644
 --- a/submodules/diff-gaussian-rasterization/setup.py
 +++ b/submodules/diff-gaussian-rasterization/setup.py
-@@ -25,6 +25,7 @@ setup(
+@@ -24,7 +24,9 @@ setup(
+             "cuda_rasterizer/rasterizer_impl.cu",
              "cuda_rasterizer/forward.cu",
              "cuda_rasterizer/backward.cu",
++            "cuda_rasterizer/adam.cu",
              "rasterize_points.cu",
 +            "conv.cu",
              "ext.cpp"],
              extra_compile_args={"nvcc": ["-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/")]})
          ],
 diff --git a/train.py b/train.py
-index 5d819b3..4104929 100644
+index 5d819b3..f5bc209 100644
 --- a/train.py
 +++ b/train.py
 @@ -12,7 +12,7 @@
@@ -3103,6 +3340,15 @@ index 5d819b3..4104929 100644
  from gaussian_renderer import render, network_gui
  import sys
  from scene import Scene, GaussianModel
+@@ -31,7 +31,7 @@ except ImportError:
+ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from):
+     first_iter = 0
+     tb_writer = prepare_output_and_logger(dataset)
+-    gaussians = GaussianModel(dataset.sh_degree)
++    gaussians = GaussianModel(dataset.sh_degree, opt.optimizer_type)
+     scene = Scene(dataset, gaussians)
+     gaussians.training_setup(opt)
+     if checkpoint:
 @@ -44,11 +44,12 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
      iter_start = torch.cuda.Event(enable_timing = True)
      iter_end = torch.cuda.Event(enable_timing = True)
@@ -3141,7 +3387,7 @@ index 5d819b3..4104929 100644
          loss.backward()
  
          iter_end.record()
-@@ -117,7 +123,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
+@@ -117,15 +123,20 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
  
                  if iteration > opt.densify_from_iter and iteration % opt.densification_interval == 0:
                      size_threshold = 20 if iteration > opt.opacity_reset_interval else None
@@ -3150,6 +3396,21 @@ index 5d819b3..4104929 100644
                  
                  if iteration % opt.opacity_reset_interval == 0 or (dataset.white_background and iteration == opt.densify_from_iter):
                      gaussians.reset_opacity()
+ 
+             # Optimizer step
+             if iteration < opt.iterations:
+-                gaussians.optimizer.step()
+-                gaussians.optimizer.zero_grad(set_to_none = True)
++                if opt.optimizer_type == "default":
++                    gaussians.optimizer.step()
++                    gaussians.optimizer.zero_grad(set_to_none = True)
++                elif opt.optimizer_type == "sparse_adam":
++                    visible = radii > 0
++                    gaussians.optimizer.step(visible, radii.shape[0])
++                    gaussians.optimizer.zero_grad(set_to_none = True)
+ 
+             if (iteration in checkpoint_iterations):
+                 print("\n[ITER {}] Saving Checkpoint".format(iteration))
 diff --git a/utils/loss_utils.py b/utils/loss_utils.py
 index 9defc23..ae64dc1 100644
 --- a/utils/loss_utils.py

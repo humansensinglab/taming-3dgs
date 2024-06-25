@@ -4,7 +4,68 @@ It does **NOT** provide any algorithmic or program logic changes, e.g., for redu
 
 For completeness, the README of the original codebase is included below.
 
-================================================
+## Training time comparison
+<a href="https://www.inria.fr/"><img height="400" src="assets/times_compare.png"> </a>
+
+## Sparse Adam Optimizer
+Sparse adam is an alternate implementation for the Adam optimizer that applies gradients only to the gaussians that are visible. Note that this can change the training behaviour, whereas all other changes don't affect the numerical results.
+
+## Using the sparse adam optimizer
+To use the sparse adam optimizer, the following argument can be appended to the training script
+```bash
+--optimizer_type sparse_adam
+```
+
+## Quality comparison
+Following is the difference in quality between the original 3DGS algorithm and our sparse adam implementation.
+
+<table><thead>
+  <tr>
+    <th rowspan="2"></th>
+    <th colspan="2">SSIM</th>
+    <th colspan="2">PSNR</th>
+    <th colspan="2">LPIPS</th>
+  </tr>
+  <tr>
+    <th>3DGS</th>
+    <th style="text-align: center"> Ours <br> (sparse adam)</th>
+    <th >3DGS</th>
+    <th style="text-align: center"> Ours <br> (sparse adam)</th>
+    <th>3DGS</th>
+    <th style="text-align: center"> Ours <br> (sparse adam)</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td>Mip-NeRF360</td>
+    <td align="center">0.815</td>
+    <td align="center">0.807</td>
+    <td align="center">27.46</td>
+    <td align="center">27.33</td>
+    <td align="center">0.215</td>
+    <td align="center">0.229</td>
+  </tr>
+  <tr>
+    <td>Tanks&amp;Temples</td>
+    <td align="center">0.847</td>
+    <td align="center">0.846</td>
+    <td align="center">23.64</td>
+    <td align="center">23.56</td>
+    <td align="center">0.176</td>
+    <td align="center">0.180</td>
+  </tr>
+  <tr>
+    <td>Deep Blending</td>
+    <td align="center">0.904</td>
+    <td align="center">0.907</td>
+    <td align="center">29.64</td>
+    <td align="center">29.69</td>
+    <td align="center">0.243</td>
+    <td align="center">0.247</td>
+  </tr>
+</tbody>
+</table>
+
+============================================================================
 
 # 3D Gaussian Splatting for Real-Time Radiance Field Rendering
 Bernhard Kerbl*, Georgios Kopanas*, Thomas Leimkühler, George Drettakis (* indicates equal contribution)<br>
