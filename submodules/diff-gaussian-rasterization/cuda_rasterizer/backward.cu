@@ -512,9 +512,9 @@ PerGaussianRenderCUDA(
 		// TODO: perhaps store these things in shared memory?
 		if (valid_splat && valid_pixel && my_warp.thread_rank() == 0 && idx < BLOCK_SIZE) {
 			T = sampled_T[global_bucket_idx * BLOCK_SIZE + idx];
-			for (int ch = 0; ch < C; ++ch)
-				ar[ch] = -pixel_colors[ch * H * W + pix_id] + sampled_ar[global_bucket_idx * BLOCK_SIZE * C + ch * BLOCK_SIZE + idx];
 			T_final = final_Ts[pix_id];
+			for (int ch = 0; ch < C; ++ch)
+				ar[ch] = -(pixel_colors[ch * H * W + pix_id] - T_final * bg_color[ch]) + sampled_ar[global_bucket_idx * BLOCK_SIZE * C + ch * BLOCK_SIZE + idx];
 			last_contributor = n_contrib[pix_id];
 			for (int ch = 0; ch < C; ++ch) {
 				dL_dpixel[ch] = dL_dpixels[ch * H * W + pix_id];
