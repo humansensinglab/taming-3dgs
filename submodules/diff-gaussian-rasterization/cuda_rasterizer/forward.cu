@@ -405,7 +405,7 @@ renderCUDA(
 	}
 
 	// max reduce the last contributor
-    typedef cub::BlockReduce<uint32_t, BLOCK_SIZE> BlockReduce;
+    typedef cub::BlockReduce<uint32_t, BLOCK_X, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BLOCK_Y> BlockReduce;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     last_contributor = BlockReduce(temp_storage).Reduce(last_contributor, cub::Max());
 	if (block.thread_rank() == 0) {
