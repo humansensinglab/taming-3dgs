@@ -13,6 +13,7 @@ import os
 import torch
 from random import randint
 from utils.loss_utils import l1_loss, fast_ssim
+from fused_ssim import fused_ssim
 from gaussian_renderer import render, network_gui
 import sys
 from scene import Scene, GaussianModel
@@ -93,7 +94,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         # Loss
         gt_image = viewpoint_cam.original_image.cuda()
         Ll1 = l1_loss(image, gt_image)
-        ssim_value = fast_ssim(image, gt_image)
+        ssim_value = fused_ssim(image.unsqueeze(0), gt_image.unsqueeze(0))
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim_value)
 
         loss.backward()
