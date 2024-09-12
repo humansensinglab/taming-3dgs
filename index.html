@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html><head lang="en"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>Taming 3DGS: High-Quality Radiance Fields with Limited Resources</title>
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
+
+
+    <!-- mirror: F0%9F%AA%9E&lt -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/codemirror.min.css">
+    <link rel="stylesheet" href="css/app.css">
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/codemirror.min.js"></script>
+    <script src="js/clipboard.min.js"></script>
+    <script src="js/video_comparison.js"></script>
+    <script src="js/app.js"></script>
+</head>
+
+<body>
+    <div class="container" id="header" style="text-align: center; margin: auto;">
+        <div class="row" id="title-row" style="max-width: 100%; margin: 0 auto; display: inline-block">
+            <h2 class="col-md-12 text-center" id="title">
+                Taming 3DGS: High-Quality Radiance Fields with Limited Resources<br>
+                <small>
+                  SIGGRAPH Asia 2024
+                </small>
+            </h2>
+        </div>
+        <div class="row" id="author-row" style="margin:0 auto;">
+            <div class="col-md-12 text-center" style="display: table; margin:0 auto">
+                <table class="author-table" id="author-table">
+                    <tr>
+                        <td>
+                            <a style="text-decoration:none" href="">
+                              Saswat Subhajyoti Mallick*
+                            </a>
+                            <br>CMU
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://rahulgoel.xyz">
+                              Rahul Goel*
+                            </a>
+                            <br>TU Graz
+                            <br>IIIT Hyderabad
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://snosixtyboo.github.io">
+                              Bernhard Kerbl
+                            </a>
+                            <br>CMU
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <a style="text-decoration:none" href="">
+                              Francisco Vicente Carrasco
+                            </a>
+                            <br>CMU
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://markussteinberger.net">
+                              Markus Steinberger
+                            </a>
+                            <br>TU Graz
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="">
+                              Fernando De La Torre
+                            </a>
+                            <br>CMU
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('author-row').style.maxWidth = document.getElementById("title-row").clientWidth + 'px';
+    </script>
+    <div class="container" id="main">
+        <br>
+        <div class="container">
+            <div class="col-md-8 col-md-offset-2 text-center" >
+              <a href="https://arxiv.org/abs/2406.15643">Arxiv</a>
+              /
+              <a href="./docs/paper.pdf">Paper (60MB)</a>
+              /
+              <a href="./docs/paper_lite.pdf">Paper (8MB)</a>
+              /
+              <a href="https://doi.org/10.1145/3680528.3687694">Publisher's Page</a>
+              /
+              <a href="./docs/supp_document.pdf">Supp. Doc</a>
+              <br>
+              <s><a href="">Supp. Video</a></s>
+              /
+              <s><a href="">Fast-Forward Video</a></s>
+              /
+              <s><a href="">Presentation</a></s>
+              /
+              <a href="https://github.com/humansensinglab/taming-3dgs">Code</a>
+            </div>
+        </div>
+
+
+        <br><br>
+        <div class="row">
+              <div class="text-center">
+                  <img src="./img/teaser.jpg" width="65%">
+              </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Abstract
+                </h3>
+                <p class="text-justify">
+                  3D Gaussian Splatting (3DGS) has transformed novel-view
+            synthesis with its fast, interpretable, and high-fidelity
+            rendering. However, its resource requirements limit its usability.
+            Especially on constrained devices, training performance degrades
+            quickly and often cannot complete due to excessive memory
+            consumption of the model. The method converges with an indefinite
+            number of Gaussians—many of them redundant—making rendering
+            unnecessarily slow and preventing its usage in downstream tasks
+            that expect fixed-size inputs. To address these issues, we tackle
+            the challenges of training and rendering 3DGS models on a budget.
+            We use a guided, purely constructive densification process that
+            steers densification toward Gaussians that raise the reconstruction
+            quality. Model size continuously increases in a controlled manner
+            towards an exact budget, using score-based densification of
+            Gaussians with training-time priors that measure their
+            contribution. We further address training speed obstacles:
+            following a careful analysis of 3DGS’ original pipeline, we derive
+            faster, numerically equivalent solutions for gradient computation
+            and attribute updates, including an alternative parallelization for
+            efficient backpropagation. We also propose quality-preserving
+            approximations where suitable to reduce training time even further.
+            Taken together, these enhancements yield a robust, scalable
+            solution with reduced training times, lower compute and memory
+            requirements, and high quality. Our evaluation shows that in a
+            budgeted setting, we obtain competitive quality metrics with 3DGS
+            while achieving a 4–5× reduction in both model size and training
+            time. With more generous budgets, our measured quality surpasses
+            theirs. These advances open the door for novelview synthesis in
+            constrained environments, e.g., mobile devices.
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Citation
+                </h3>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <textarea id="bibtex" class="form-control" readonly>
+@inproceedings{taming3dgs,
+    author={Subhajyoti Mallick, Saswat and Goel, Rahul and Kerbl, Bernhard and
+              Vicente Carrasco, Francisco and Steinberger, Markus and De La
+              Torre, Fernando},
+    title={Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
+    booktitle = {SIGGRAPH Asia 2024 Conference Papers},
+    year={2024},
+    doi = {10.1145/3680528.3687694},
+    url = {https://humansensinglab.github.io/taming-3dgs/}
+}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                    <br>
+                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a> and <a href="http://dorverbin.github.io/refnerf">Ref-NeRF</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+</body></html>
