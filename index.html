@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html><head lang="en"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+
+<head lang="en">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
     <meta http-equiv="x-ua-compatible" content="ie=edge">
 
@@ -8,20 +11,22 @@
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<!-- Facebook Meta Tags -->
-	<meta property="og:url" content="https://humansensinglab.github.io/taming-3dgs/">
-	<meta property="og:type" content="website">
-	<meta property="og:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
-	<meta property="og:description" content="">
-	<meta property="og:image" content="https://opengraph.b-cdn.net/production/images/e2d06d2c-0d8b-44cc-9f4f-1ab52f6fb49b.png?token=q-KHFKHxAZZTjzuQ1Nh-6q9v6bBjwwmZOmLww-Wj0Q8&height=532&width=801&expires=33262767637">
-	
-	<!-- Twitter Meta Tags -->
-	<meta name="twitter:card" content="summary_large_image">
-	<meta property="twitter:domain" content="humansensinglab.github.io">
-	<meta property="twitter:url" content="https://humansensinglab.github.io/taming-3dgs/">
-	<meta name="twitter:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
-	<meta name="twitter:description" content="">
-	<meta name="twitter:image" content="https://opengraph.b-cdn.net/production/images/e2d06d2c-0d8b-44cc-9f4f-1ab52f6fb49b.png?token=q-KHFKHxAZZTjzuQ1Nh-6q9v6bBjwwmZOmLww-Wj0Q8&height=532&width=801&expires=33262767637">
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://humansensinglab.github.io/taming-3dgs/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
+    <meta property="og:description" content="">
+    <meta property="og:image"
+        content="https://opengraph.b-cdn.net/production/images/e2d06d2c-0d8b-44cc-9f4f-1ab52f6fb49b.png?token=q-KHFKHxAZZTjzuQ1Nh-6q9v6bBjwwmZOmLww-Wj0Q8&height=532&width=801&expires=33262767637">
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:domain" content="humansensinglab.github.io">
+    <meta property="twitter:url" content="https://humansensinglab.github.io/taming-3dgs/">
+    <meta name="twitter:title" content="Taming 3DGS: High-Quality Radiance Fields with Limited Resources">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image"
+        content="https://opengraph.b-cdn.net/production/images/e2d06d2c-0d8b-44cc-9f4f-1ab52f6fb49b.png?token=q-KHFKHxAZZTjzuQ1Nh-6q9v6bBjwwmZOmLww-Wj0Q8&height=532&width=801&expires=33262767637">
 
     <!-- mirror: F0%9F%AA%9E&lt -->
     <link rel="stylesheet" href="css/bootstrap.min.css">
@@ -43,52 +48,52 @@
             <h2 class="col-md-12 text-center" id="title">
                 Taming 3DGS: High-Quality Radiance Fields with Limited Resources<br>
                 <small>
-                  SIGGRAPH Asia 2024
+                    SIGGRAPH Asia 2024
                 </small>
             </h2>
         </div>
         <div class="row" id="author-row" style="margin:0 auto;">
             <div class="col-md-12 text-center" style="display: table; margin:0 auto">
-                <table class="author-table" id="author-table" style="table-layout: fixed; width: 75%;">
+                <table class="author-table" id="author-table" style="table-layout: fixed; width: 85%;">
                     <tr>
                         <td>
                             <a style="text-decoration:none" href="">
-                              Saswat Subhajyoti Mallick*
+                                Saswat Subhajyoti Mallick*
                             </a>
-                            <br>CMU
+                            <br>Carnegie Mellon University
                         </td>
                         <td>
                             <a style="text-decoration:none" href="https://rahulgoel.xyz">
-                              Rahul Goel*
+                                Rahul Goel*
                             </a>
-                            <br>TU Graz
+                            <br>Graz University of Technology
                             <br>IIIT Hyderabad
                         </td>
                         <td>
                             <a style="text-decoration:none" href="https://snosixtyboo.github.io">
-                              Bernhard Kerbl
+                                Bernhard Kerbl
                             </a>
-                            <br>CMU
+                            <br>Carnegie Mellon University
                         </td>
                     </tr>
                     <tr>
                         <td>
                             <a style="text-decoration:none" href="">
-                              Francisco Vicente Carrasco
+                                Francisco Vicente Carrasco
                             </a>
-                            <br>CMU
+                            <br>Carnegie Mellon University
                         </td>
                         <td>
                             <a style="text-decoration:none" href="https://markussteinberger.net">
-                              Markus Steinberger
+                                Markus Steinberger
                             </a>
-                            <br>TU Graz
+                            <br>Graz University of Technology
                         </td>
                         <td>
                             <a style="text-decoration:none" href="">
-                              Fernando De La Torre
+                                Fernando De La Torre
                             </a>
-                            <br>CMU
+                            <br>Carnegie Mellon University
                         </td>
                     </tr>
                 </table>
@@ -101,72 +106,110 @@
     <div class="container" id="main">
         <br>
         <div class="container">
-            <div class="col-md-8 col-md-offset-2 text-center" >
-              <a href="https://arxiv.org/abs/2406.15643">Arxiv</a>
-              /
-              <a href="./docs/paper.pdf">Paper (60MB)</a>
-              /
-              <a href="./docs/paper_lite.pdf">Paper (8MB)</a>
-              /
-              <a href="https://doi.org/10.1145/3680528.3687694">Publisher's Page</a>
-              /
-              <a href="./docs/supp_document.pdf">Supp. Doc</a>
-              <br>
-              <s><a href="">Supp. Video</a></s>
-              /
-              <s><a href="">Fast-Forward Video</a></s>
-              /
-              <s><a href="">Presentation</a></s>
-              /
-              <a href="https://github.com/humansensinglab/taming-3dgs">Code</a>
+            <div class="col-md-8 col-md-offset-2 text-center">
+                <a href="./docs/paper.pdf">Paper (60MB)</a>
+                /
+                <a href="./docs/paper_lite.pdf">Paper (8MB)</a>
+                /
+                <a href="https://doi.org/10.1145/3680528.3687694">Publisher's Page</a>
+                /
+                <a href="./docs/supp_document.pdf">Supp. Doc</a>
+                /
+                <a href="https://arxiv.org/abs/2406.15643">Arxiv</a>
+                <br>
+                <s><a href="">Supp. Video</a></s>
+                /
+                <s><a href="">Fast-Forward Video</a></s>
+                /
+                <s><a href="">Presentation</a></s>
+                /
+                <a href="https://github.com/humansensinglab/taming-3dgs">Code</a>
             </div>
         </div>
 
 
         <br><br>
         <div class="row">
-              <div class="text-center">
-                  <img src="./img/teaser.jpg" width="65%">
-              </div>
+            <div class="text-center">
+                <img src="./img/teaser.jpg" width="65%">
+            </div>
         </div>
 
 
         <div class="row">
             <div class="col-md-8 col-md-offset-2">
                 <h3>
-                    Abstract
+                    Overview
                 </h3>
                 <p class="text-justify">
-                  3D Gaussian Splatting (3DGS) has transformed novel-view
-            synthesis with its fast, interpretable, and high-fidelity
-            rendering. However, its resource requirements limit its usability.
-            Especially on constrained devices, training performance degrades
-            quickly and often cannot complete due to excessive memory
-            consumption of the model. The method converges with an indefinite
-            number of Gaussians—many of them redundant—making rendering
-            unnecessarily slow and preventing its usage in downstream tasks
-            that expect fixed-size inputs. To address these issues, we tackle
-            the challenges of training and rendering 3DGS models on a budget.
-            We use a guided, purely constructive densification process that
-            steers densification toward Gaussians that raise the reconstruction
-            quality. Model size continuously increases in a controlled manner
-            towards an exact budget, using score-based densification of
-            Gaussians with training-time priors that measure their
-            contribution. We further address training speed obstacles:
-            following a careful analysis of 3DGS’ original pipeline, we derive
-            faster, numerically equivalent solutions for gradient computation
-            and attribute updates, including an alternative parallelization for
-            efficient backpropagation. We also propose quality-preserving
-            approximations where suitable to reduce training time even further.
-            Taken together, these enhancements yield a robust, scalable
-            solution with reduced training times, lower compute and memory
-            requirements, and high quality. Our evaluation shows that in a
-            budgeted setting, we obtain competitive quality metrics with 3DGS
-            while achieving a 4–5× reduction in both model size and training
-            time. With more generous budgets, our measured quality surpasses
-            theirs. These advances open the door for novelview synthesis in
-            constrained environments, e.g., mobile devices.
+                    3D Gaussian Splatting (3DGS) has transformed novel-view
+                    synthesis with its fast, interpretable, and high-fidelity
+                    rendering. However, its resource requirements limit its usability.
+                    Especially on constrained devices, training performance degrades
+                    quickly and often cannot complete due to excessive memory
+                    consumption of the model. The method converges with an indefinite
+                    number of Gaussians—many of them redundant—making rendering
+                    unnecessarily slow and preventing its usage in downstream tasks
+                    that expect fixed-size inputs. To address these issues, we tackle
+                    the challenges of training and rendering 3DGS models on a budget.
                 </p>
+                <p class="text-justify"></p>
+                We use a guided, purely constructive densification process that
+                steers densification toward Gaussians that raise the reconstruction
+                quality. Model size continuously increases in a controlled manner
+                towards an exact budget, using score-based densification of
+                Gaussians with training-time priors that measure their
+                contribution.
+                </p>
+                <p class="text-justify">
+                    We further address training speed obstacles:
+                    following a careful analysis of 3DGS’ original pipeline, we derive
+                    faster, numerically equivalent solutions for gradient computation
+                    and attribute updates, including an alternative parallelization for
+                    efficient backpropagation. We also propose quality-preserving
+                    approximations where suitable to reduce training time even further.
+                </p>
+                <p class="text-justify">
+                    Taken together, these enhancements yield a robust, scalable
+                    solution with reduced training times, lower compute and memory
+                    requirements, and high quality. Our evaluation shows that in a
+                    budgeted setting, we obtain competitive quality metrics with 3DGS
+                    while achieving a 4–5× reduction in both model size and training
+                    time. With more generous budgets, our measured quality surpasses
+                    theirs. These advances open the door for novel-view synthesis in
+                    constrained environments, e.g., mobile devices.
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Video
+                </h3>
+                <iframe src="https://youtu.be/iiUXqYmezbY" frameborder="0" allowfullscreen></iframe>
+                </iframe>
+
+                <style>
+                    .video-container {
+                        position: relative;
+                        width: 85%;
+                        /* Adjust this percentage as needed */
+                        padding-bottom: 56.25%;
+                        /* 16:9 aspect ratio (9 / 16 = 0.5625) */
+                        height: 0;
+                        margin: 0 auto;
+                        /* Center the video horizontally */
+                    }
+
+                    .video-container iframe {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                    }
+                </style>
             </div>
         </div>
 
@@ -193,12 +236,15 @@
 
         <div class="row">
             <div class="col-md-8 col-md-offset-2">
-                    <br>
-                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a> and <a href="http://dorverbin.github.io/refnerf">Ref-NeRF</a>.
+                <br>
+                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a> and <a
+                    href="http://dorverbin.github.io/refnerf">Ref-NeRF</a>.
                 </p>
             </div>
         </div>
     </div>
 
 
-</body></html>
+</body>
+
+</html>
