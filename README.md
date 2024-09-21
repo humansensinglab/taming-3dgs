@@ -7,6 +7,20 @@ Saswat Subhajyoti Mallick*, Rahul Goel*, Bernhard Kerbl, Francisco Vicente Carra
 
 **Abstract:** *3D Gaussian Splatting (3DGS) has transformed novel-view synthesis with its fast, interpretable, and high-fidelity rendering. However, its resource requirements limit its usability. Especially on constrained devices, training performance degrades quickly and often cannot complete due to excessive memory consumption of the model. The method converges with an indefinite number of Gaussians—many of them redundant—making rendering unnecessarily slow and preventing its usage in downstream tasks that expect fixed-size inputs. To address these issues, we tackle the challenges of training and rendering 3DGS models on a budget. We use a guided, purely constructive densification process that steers densification toward Gaussians that raise the reconstruction quality. Model size continuously increases in a controlled manner towards an exact budget, using score-based densification of Gaussians with training-time priors that measure their contribution. We further address training speed obstacles: following a careful analysis of 3DGS’ original pipeline, we derive faster, numerically equivalent solutions for gradient computation and attribute updates, including an alternative parallelization for efficient backpropagation. We also propose quality-preserving approximations where suitable to reduce training time even further. Taken together, these enhancements yield a robust, scalable solution with reduced training times, lower compute and memory requirements, and high quality. Our evaluation shows that in a budgeted setting, we obtain competitive quality metrics with 3DGS while achieving a 4–5× reduction in both model size and training time. With more generous budgets, our measured quality surpasses theirs. These advances open the door for novelview synthesis in constrained environments, e.g., mobile devices.*
 
+## BibTeX
+```
+@inproceedings{taming3dgs,
+    author={{Mallick and Goel} and Kerbl, Bernhard and
+              Vicente Carrasco, Francisco and Steinberger, Markus and De La
+              Torre, Fernando},
+    title={Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
+    booktitle = {SIGGRAPH Asia 2024 Conference Papers},
+    year={2024},
+    doi = {10.1145/3680528.3687694},
+    url = {https://humansensinglab.github.io/taming-3dgs/}
+}
+```
+
 ---
 
 Currently, this repository only contains the performance optimizations as drop-in replacements for the original implementation. It **does not** provide the changes to the densification scheme. The completely code will be released in late November 2024 prior to SIGGRAPH Asia 2024 conference dates.
