@@ -111,14 +111,12 @@
                 /
                 <a href="./docs/paper_lite.pdf">Paper (8MB)</a>
                 /
-                <a href="https://doi.org/10.1145/3680528.3687694">Publisher's Page</a>
-                /
                 <a href="./docs/supp_document.pdf">Supp. Doc</a>
+                /
+                <a href="https://doi.org/10.1145/3680528.3687694">Publisher's Page</a>
                 /
                 <a href="https://arxiv.org/abs/2406.15643">Arxiv</a>
                 <br>
-                <s><a href="">Supp. Video</a></s>
-                /
                 <s><a href="">Fast-Forward Video</a></s>
                 /
                 <s><a href="">Presentation</a></s>
@@ -161,6 +159,11 @@
                 Gaussians with training-time priors that measure their
                 contribution.
                 </p>
+                <div class="row">
+                    <div class="text-center">
+                        <img src="./img/bonsai.jpg" width="75%">
+                    </div>
+                </div>
                 <p class="text-justify">
                     We further address training speed obstacles:
                     following a careful analysis of 3DGS’ original pipeline, we derive
@@ -169,6 +172,11 @@
                     efficient backpropagation. We also propose quality-preserving
                     approximations where suitable to reduce training time even further.
                 </p>
+                <div class="row">
+                    <div class="text-center">
+                        <img src="./img/accel.jpg" width="65%">
+                    </div>
+                </div>
                 <p class="text-justify">
                     Taken together, these enhancements yield a robust, scalable
                     solution with reduced training times, lower compute and memory
@@ -179,6 +187,11 @@
                     theirs. These advances open the door for novel-view synthesis in
                     constrained environments, e.g., mobile devices.
                 </p>
+                <div class="row">
+                    <div class="text-center">
+                        <img src="./img/results.jpg" width="100%">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -187,31 +200,34 @@
                 <h3>
                     Video
                 </h3>
-                <iframe src="https://youtu.be/iiUXqYmezbY" frameborder="0" allowfullscreen></iframe>
-                </iframe>
-
-                <style>
-                    .video-container {
-                        position: relative;
-                        width: 85%;
-                        /* Adjust this percentage as needed */
-                        padding-bottom: 56.25%;
-                        /* 16:9 aspect ratio (9 / 16 = 0.5625) */
-                        height: 0;
-                        margin: 0 auto;
-                        /* Center the video horizontally */
-                    }
-
-                    .video-container iframe {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                    }
-                </style>
             </div>
         </div>
+        <div class="video-container">
+            <iframe src="https://www.youtube.com/embed/iiUXqYmezbY" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <style>
+            .video-container {
+                position: relative;
+                width: 100vw;
+                /* 85% of the viewport width */
+                max-width: 100%;
+                /* Limit to 85% of the parent/container width */
+                padding-bottom: 56.25%;
+                /* 16:9 aspect ratio (9 / 16 = 0.5625) */
+                height: 0;
+                margin: 0 auto;
+                /* Center the video horizontally */
+            }
+
+            .video-container iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
 
         <div class="row">
             <div class="col-md-8 col-md-offset-2">
@@ -219,11 +235,27 @@
                     Citation
                 </h3>
                 <div class="form-group col-md-10 col-md-offset-1">
+                    Joint first-authorship is not supported in BibTex; you may need to modify the below if not using
+                    CVPR's format.
+                </div>
+                <div class="form-group col-md-10 col-md-offset-1">
                     <textarea id="bibtex" class="form-control" readonly>
 @inproceedings{taming3dgs,
-    author={{Mallick and Goel} and Kerbl, Bernhard and
-              Vicente Carrasco, Francisco and Steinberger, Markus and De La
-              Torre, Fernando},
+    author={{Saswat Mallick and Rahul Goel} and Kerbl, Bernhard and Vicente Carrasco, Francisco and Steinberger, Markus and De La Torre, Fernando},
+    title={Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
+    booktitle = {SIGGRAPH Asia 2024 Conference Papers},
+    year={2024},
+    doi = {10.1145/3680528.3687694},
+    url = {https://humansensinglab.github.io/taming-3dgs/}
+}</textarea>
+                </div>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    For SIGGRAPH format, you can try the following:
+                </div>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <textarea id="bibtex2" class="form-control" readonly>
+@inproceedings{taming3dgs,
+    author={{Mallick and Goel} and Kerbl, Bernhard and Vicente Carrasco, Francisco and Steinberger, Markus and De La Torre, Fernando},
     title={Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
     booktitle = {SIGGRAPH Asia 2024 Conference Papers},
     year={2024},
