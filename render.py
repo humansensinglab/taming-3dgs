@@ -36,7 +36,7 @@ def render_set(model_path, name, iteration, views, gaussians, pipeline, backgrou
 
 def render_sets(dataset : ModelParams, iteration : int, pipeline : PipelineParams, skip_train : bool, skip_test : bool):
     with torch.no_grad():
-        gaussians = GaussianModel(dataset.sh_degree)
+        gaussians = GaussianModel(dataset.sh_degree, optimizer_type="default", rendering_mode="abs")
         scene = Scene(dataset, gaussians, load_iteration=iteration, shuffle=False)
 
         bg_color = [1,1,1] if dataset.white_background else [0, 0, 0]

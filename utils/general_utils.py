@@ -15,6 +15,9 @@ from datetime import datetime
 import numpy as np
 import random
 
+def identity_gate(x):
+    return x
+
 def inverse_sigmoid(x):
     return torch.log(x/(1-x))
 

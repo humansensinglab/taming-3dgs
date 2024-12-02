@@ -15,7 +15,7 @@
 #include <tuple>
 #include <string>
 	
-std::tuple<int, int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<int, int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -36,7 +36,8 @@ RasterizeGaussiansCUDA(
 	const int degree,
 	const torch::Tensor& campos,
 	const bool prefiltered,
-	const bool debug);
+	const bool debug,
+	const torch::Tensor& pixel_weights);
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
  RasterizeGaussiansBackwardCUDA(
@@ -70,6 +71,8 @@ torch::Tensor markVisible(
 		torch::Tensor& viewmatrix,
 		torch::Tensor& projmatrix);
 
+torch::Tensor conv2DForward(torch::Tensor &input);
+
 void adamUpdate(
 	torch::Tensor &param,
 	torch::Tensor &param_grad,
@@ -81,10 +84,32 @@ void adamUpdate(
 	const float b2,
 	const float eps,
 	const uint32_t N,
-	const uint32_t M
+	const uint32_t M);
+
+torch::Tensor ssimrest(
+	float C1, 
+	float C2, 
+	torch::Tensor& mu1, 
+	torch::Tensor& mu2, 
+	torch::Tensor& mim, 
+	torch::Tensor& mom, 
+	torch::Tensor& mu2_sq, 
+	torch::Tensor& sigma2_sq
 );
-	
-torch::Tensor
+
+std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ssimrest_back(
+	float C1, 
+	float C2, 
+	torch::Tensor& mu1, 
+	torch::Tensor& mu2, 
+	torch::Tensor& mim, 
+	torch::Tensor& mom, 
+	torch::Tensor& mu2_sq, 
+	torch::Tensor& sigma2_sq,
+	torch::Tensor& dL
+);
+
+std::tuple<torch::Tensor,torch::Tensor,torch::Tensor,torch::Tensor>
 fusedssim(
     float C1,
     float C2,
@@ -98,5 +123,8 @@ fusedssim_backward(
     float C2,
     torch::Tensor &img1,
     torch::Tensor &img2,
-    torch::Tensor &dL_dmap
+    torch::Tensor &dL_dmap,
+    torch::Tensor &fac_dL_dmu1,
+    torch::Tensor &fac_dL_dsigma1_sq,
+    torch::Tensor &fac_dL_dsigma12
 );

@@ -77,6 +77,7 @@ class OptimizationParams(ParamGroup):
         self.position_lr_delay_mult = 0.01
         self.position_lr_max_steps = 30_000
         self.feature_lr = 0.0025
+        self.shfeature_lr = 0.005
         self.opacity_lr = 0.025
         self.scaling_lr = 0.005
         self.rotation_lr = 0.001

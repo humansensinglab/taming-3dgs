@@ -60,7 +60,10 @@ class _RasterizeGaussians(torch.autograd.Function):
     ):
 
         # Restructure arguments the way that the C++ lib expects them
-        
+        pweights = raster_settings.pixel_weights
+        if pweights == None:
+            pweights = torch.empty((0), device="cuda")
+
         args = (
             raster_settings.bg, 
             means3D,
@@ -81,30 +84,31 @@ class _RasterizeGaussians(torch.autograd.Function):
             raster_settings.sh_degree,
             raster_settings.campos,
             raster_settings.prefiltered,
-            raster_settings.debug
+            raster_settings.debug,
+            pweights
         )
 
         # Invoke C++/CUDA rasterizer
         if raster_settings.debug:
             cpu_args = cpu_deep_copy_tuple(args) # Copy them before they can be corrupted
             try:
-                num_rendered, num_buckets, color, radii, geomBuffer, binningBuffer, imgBuffer, sampleBuffer = _C.rasterize_gaussians(*args)
+                num_rendered, num_buckets, color, radii, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(*args)
             except Exception as ex:
                 torch.save(cpu_args, "snapshot_fw.dump")
                 print("\nAn error occured in forward. Please forward snapshot_fw.dump for debugging.")
                 raise ex
         else:
-            num_rendered, num_buckets, color, radii, geomBuffer, binningBuffer, imgBuffer, sampleBuffer = _C.rasterize_gaussians(*args)
+            num_rendered, num_buckets, color, radii, geomBuffer, binningBuffer, imgBuffer, sampleBuffer, countBuffer, listBuffer, listBufferRender, listBufferDistance, centers, depths, my_radii, accum_weights, accum_count, accum_blend, accum_dist = _C.rasterize_gaussians(*args)
 
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered
         ctx.num_buckets = num_buckets
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, dc, sh, geomBuffer, binningBuffer, imgBuffer, sampleBuffer)
-        return color, radii
+        return color, radii, countBuffer, listBuffer, listBufferRender, listBufferDistance, centers, depths, my_radii, accum_weights, accum_count, accum_blend, accum_dist
 
     @staticmethod
-    def backward(ctx, grad_out_color, *_):
+    def backward(ctx, grad_out_color, _, dumy, wumy, pumy, fumy, g_center, g_depth, g_radii, g_weights, g_count, g_blend, g_dist):
 
         # Restore necessary values from context
         num_rendered = ctx.num_rendered
@@ -178,6 +182,7 @@ class GaussianRasterizationSettings(NamedTuple):
     campos : torch.Tensor
     prefiltered : bool
     debug : bool
+    pixel_weights : torch.Tensor
 
 class GaussianRasterizer(nn.Module):
     def __init__(self, raster_settings):

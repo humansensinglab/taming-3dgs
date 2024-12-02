@@ -29,10 +29,17 @@ namespace CudaRasterizer
 			bool* present);
 
 		static std::tuple<int,int> forward(
+			float2* xy_d,
+			float *depths_d,
+			int *radii_d,
 			std::function<char* (size_t)> geometryBuffer,
 			std::function<char* (size_t)> binningBuffer,
 			std::function<char* (size_t)> imageBuffer,
 			std::function<char* (size_t)> sampleBuffer,
+			std::function<int* (size_t)> listBuffer,
+			std::function<float* (size_t)> listBufferRender,
+			std::function<float* (size_t)> listBufferDistance,
+			int* contribCountBuffer, int* contribOffsetBuffer,
 			const int P, int D, int M,
 			const float* background,
 			const int width, int height,
@@ -52,7 +59,12 @@ namespace CudaRasterizer
 			const bool prefiltered,
 			float* out_color,
 			int* radii = nullptr,
-			bool debug = false);
+			bool debug = false,
+			float* pixel_weights = nullptr,
+			float* accum_weights = nullptr,
+			int* reverse_count = nullptr,
+			float* blend_weights = nullptr,
+			float* dist_accum = nullptr);
 
 		static void backward(
 			const int P, int D, int M, int R, int B,

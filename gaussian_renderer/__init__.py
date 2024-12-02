@@ -15,7 +15,7 @@ from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianR
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
 
-def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None):
+def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, scaling_modifier = 1.0, override_color = None, pixel_weights=None):
     """
     Render the scene. 
     
@@ -45,7 +45,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
         sh_degree=pc.active_sh_degree,
         campos=viewpoint_camera.camera_center,
         prefiltered=False,
-        debug=pipe.debug
+        debug=pipe.debug,
+        pixel_weights=pixel_weights
     )
 
     rasterizer = GaussianRasterizer(raster_settings=raster_settings)
@@ -87,7 +88,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
 
     # Rasterize visible Gaussians to image, obtain their radii (on screen). 
     if pipe.separate_sh:
-        rendered_image, radii = rasterizer(
+        rendered_image, radii, counts, lists, listsRender, listsDistance, centers, depths, my_radii, accum_weights, accum_count, accum_blend, accum_dist = rasterizer(
             means3D = means3D,
             means2D = means2D,
             dc = dc,
@@ -98,7 +99,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
             rotations = rotations,
             cov3D_precomp = cov3D_precomp)
     else:
-        rendered_image, radii = rasterizer(
+        rendered_image, radii, counts, lists, listsRender, listsDistance, centers, depths, my_radii, accum_weights, accum_count, accum_blend, accum_dist = rasterizer(
             means3D = means3D,
             means2D = means2D,
             shs = shs,
@@ -113,4 +114,15 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, 
     return {"render": rendered_image,
             "viewspace_points": screenspace_points,
             "visibility_filter" : (radii > 0).nonzero(),
-            "radii": radii}
+            "radii": radii,
+            "counts" : counts,
+            "lists" : lists,
+            "listsRender": listsRender,
+            "listsDistance": listsDistance,
+            "gaussian_centers": centers,
+            "gaussian_depths": depths,
+            "gaussian_radii": my_radii,
+            "accum_weights": accum_weights,
+            "accum_count" : accum_count,
+            "accum_blend" : accum_blend,
+            "accum_dist" : accum_dist}

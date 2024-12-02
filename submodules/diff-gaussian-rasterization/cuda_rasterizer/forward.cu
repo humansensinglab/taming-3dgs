@@ -158,7 +158,10 @@ __device__ void computeCov3D(const glm::vec3 scale, float mod, const glm::vec4 r
 
 // Perform initial steps for each Gaussian prior to rasterization.
 template<int C>
-__global__ void preprocessCUDA(int P, int D, int M,
+__global__ void preprocessCUDA(float2* xy_d,
+    float *depths_d, 
+	int *radii_d,
+	int P, int D, int M,
 	const float* orig_points,
 	const glm::vec3* scales,
 	const float scale_modifier,
@@ -257,6 +260,10 @@ __global__ void preprocessCUDA(int P, int D, int M,
 	radii[idx] = my_radius;
 	points_xy_image[idx] = point_image;
 
+	depths_d[idx] = p_view.z;
+	xy_d[idx] = { point_image.x, point_image.y };
+	radii_d[idx] = my_radius;
+
 	// Inverse 2D covariance and opacity neatly pack into one float4
 	conic_opacity[idx] = { conic.x, conic.y, conic.z, opacities[idx] };
 	tiles_touched[idx] = (rect_max.y - rect_min.y) * (rect_max.x - rect_min.x);
@@ -280,7 +287,13 @@ renderCUDA(
 	uint32_t* __restrict__ n_contrib,
 	uint32_t* __restrict__ max_contrib,
 	const float* __restrict__ bg_color,
-	float* __restrict__ out_color)
+	float* __restrict__ out_color,
+	int* __restrict__ count_contrib,
+	float* __restrict__ pixel_weights,
+	float* __restrict__ accum_weights,
+	int* __restrict__ reverse_count,
+	float* __restrict__ blend_weights,
+	float* __restrict__ dist_accum)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -324,6 +337,7 @@ renderCUDA(
 	uint32_t last_contributor = 0;
 	float C[CHANNELS] = { 0 };
 
+	int contribs = 0;
 	// Iterate over batches until all done or range is complete
 	for (int i = 0; i < rounds; i++, toDo -= BLOCK_SIZE)
 	{
@@ -385,11 +399,20 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * alpha * T;
 
+			if(pixel_weights != nullptr)
+			{
+				atomicAdd(&accum_weights[collected_id[j]], pixel_weights[pix_id]);
+				atomicAdd(&reverse_count[collected_id[j]], 1);
+				atomicAdd(&blend_weights[collected_id[j]], T * alpha);
+				atomicAdd(&dist_accum[collected_id[j]], sqrt(d.x*d.x + d.y*d.y));
+			}
+
 			T = test_T;
 
 			// Keep track of last range entry to update this
 			// pixel.
 			last_contributor = contributor;
+			contribs++;
 		}
 	}
 
@@ -402,10 +425,12 @@ renderCUDA(
 		for (int ch = 0; ch < CHANNELS; ch++)
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
 
+		if(count_contrib)
+			count_contrib[pix_id] = contribs;
 	}
 
 	// max reduce the last contributor
-    typedef cub::BlockReduce<uint32_t, BLOCK_X, cub::BLOCK_REDUCE_WARP_REDUCTIONS, BLOCK_Y> BlockReduce;
+    typedef cub::BlockReduce<uint32_t, BLOCK_SIZE> BlockReduce;
     __shared__ typename BlockReduce::TempStorage temp_storage;
     last_contributor = BlockReduce(temp_storage).Reduce(last_contributor, cub::Max());
 	if (block.thread_rank() == 0) {
@@ -428,7 +453,19 @@ void FORWARD::render(
 	uint32_t* n_contrib,
 	uint32_t* max_contrib,
 	const float* bg_color,
-	float* out_color)
+	float* out_color,
+	int* img_contrib_counts,
+	int* img_contrib_offsets,
+	char* img_contrib_scan,
+	size_t scan_size,
+	std::function<int* (size_t)> listBuffer,
+	std::function<float* (size_t)> listBufferRender,
+	std::function<float* (size_t)> listBufferDistance,
+	float* pixel_weights,
+	float* accum_weights,
+	int* reverse_count,
+	float* blend_weights,
+	float* dist_accum)
 {
 	renderCUDA<NUM_CHAFFELS> << <grid, block >> > (
 		ranges,
@@ -443,10 +480,20 @@ void FORWARD::render(
 		n_contrib,
 		max_contrib,
 		bg_color,
-		out_color);
+		out_color,
+		img_contrib_counts,
+		pixel_weights,
+		accum_weights,
+		reverse_count,
+		blend_weights,
+		dist_accum
+		);
 }
 
-void FORWARD::preprocess(int P, int D, int M,
+void FORWARD::preprocess(float2* xy_d,
+    float *depths_d,
+	int *radii_d,
+	int P, int D, int M,
 	const float* means3D,
 	const glm::vec3* scales,
 	const float scale_modifier,
@@ -474,6 +521,9 @@ void FORWARD::preprocess(int P, int D, int M,
 	bool prefiltered)
 {
 	preprocessCUDA<NUM_CHAFFELS> << <(P + 255) / 256, 256 >> > (
+		xy_d,
+		depths_d,
+		radii_d,
 		P, D, M,
 		means3D,
 		scales,

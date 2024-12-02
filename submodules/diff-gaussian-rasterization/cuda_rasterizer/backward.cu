@@ -487,8 +487,28 @@ PerGaussianRenderCUDA(
 	const float ddelx_dx = 0.5 * W;
 	const float ddely_dy = 0.5 * H;
 
+  // shared memory
+  __shared__ float Shared_sampled_ar[32 * C + 1];
+  sampled_ar += global_bucket_idx * BLOCK_SIZE * C;
+  __shared__ float Shared_pixels[32 * C];
+
 	// iterate over all pixels in the tile
+  	#pragma unroll
 	for (int i = 0; i < BLOCK_SIZE + 31; ++i) {
+    if (i % 32 == 0) {
+      for (int ch = 0; ch < C; ++ch) {
+        int shift = BLOCK_SIZE * ch + i + block.thread_rank();
+        Shared_sampled_ar[ch * 32 + block.thread_rank()] = sampled_ar[shift];
+      }
+      const uint32_t local_id = i + block.thread_rank();
+      const uint2 pix = {pix_min.x + local_id % BLOCK_X, pix_min.y + local_id / BLOCK_X};
+      const uint32_t id = W * pix.y + pix.x;
+      for (int ch = 0; ch < C; ++ch) {
+        Shared_pixels[ch * 32 + block.thread_rank()] = pixel_colors[ch * H * W + id];
+      }
+      block.sync();
+    }
+
 		// SHUFFLING
 
 		// At this point, T already has my (1 - alpha) multiplied.
@@ -512,9 +532,10 @@ PerGaussianRenderCUDA(
 		// TODO: perhaps store these things in shared memory?
 		if (valid_splat && valid_pixel && my_warp.thread_rank() == 0 && idx < BLOCK_SIZE) {
 			T = sampled_T[global_bucket_idx * BLOCK_SIZE + idx];
+      		int ii = i % 32;
+			for (int ch = 0; ch < C; ++ch) 
+				ar[ch] = -Shared_pixels[ch * 32 + ii] + Shared_sampled_ar[ch * 32 + ii];
 			T_final = final_Ts[pix_id];
-			for (int ch = 0; ch < C; ++ch)
-				ar[ch] = -(pixel_colors[ch * H * W + pix_id] - T_final * bg_color[ch]) + sampled_ar[global_bucket_idx * BLOCK_SIZE * C + ch * BLOCK_SIZE + idx];
 			last_contributor = n_contrib[pix_id];
 			for (int ch = 0; ch < C; ++ch) {
 				dL_dpixel[ch] = dL_dpixels[ch * H * W + pix_id];
@@ -535,19 +556,21 @@ PerGaussianRenderCUDA(
 			const float alpha = min(0.99f, con_o.w * G);
 			if (alpha < 1.0f / 255.0f) continue;
 			const float dchannel_dcolor = alpha * T;
+	        const float one_minus_alpha_reci = 1.0f / (1.0f - alpha);
 
 			// add the gradient contribution of this pixel to the gaussian
-			float bg_dot_dpixel = 0.0f;
 			float dL_dalpha = 0.0f;
 			for (int ch = 0; ch < C; ++ch) {
-				ar[ch] += T * alpha * c[ch];
+				ar[ch] += dchannel_dcolor * c[ch];
 				const float &dL_dchannel = dL_dpixel[ch];
 				Register_dL_dcolors[ch] += dchannel_dcolor * dL_dchannel;
-				dL_dalpha += ((c[ch] * T) - (1.0f / (1.0f - alpha)) * (-ar[ch])) * dL_dchannel;
-
+				dL_dalpha += (c[ch] * T + one_minus_alpha_reci * ar[ch]) * dL_dchannel;
+			}
+			float bg_dot_dpixel = 0.0f;
+			for (int ch = 0; ch < C; ++ch) {
 				bg_dot_dpixel += bg_color[ch] * dL_dpixel[ch];
 			}
-			dL_dalpha += (-T_final / (1.0f - alpha)) * bg_dot_dpixel;
+			dL_dalpha += (-T_final * one_minus_alpha_reci) * bg_dot_dpixel;
 			T *= (1.0f - alpha);
 
 

@@ -22,7 +22,10 @@
 namespace FORWARD
 {
 	// Perform initial steps for each Gaussian prior to rasterization.
-	void preprocess(int P, int D, int M,
+	void preprocess(float2* xy_d,
+    	float *depths_d,
+		int *radii_d,
+		int P, int D, int M,
 		const float* orig_points,
 		const glm::vec3* scales,
 		const float scale_modifier,
@@ -64,7 +67,19 @@ namespace FORWARD
 		uint32_t* n_contrib,
 		uint32_t* max_contrib,
 		const float* bg_color,
-		float* out_color);
+		float* out_color,
+		int* img_contribs,
+		int* img_contrib_offsets,
+		char* img_contrib_scan,
+		size_t scan_size,
+		std::function<int* (size_t)> listBuffer,
+		std::function<float* (size_t)> listBufferRender,
+		std::function<float* (size_t)> listBufferDistance,
+		float* pixel_weights,
+		float* accum_weights,
+		int* reverse_count,
+		float* blend_weights,
+		float* dist_accum);
 }
 
 

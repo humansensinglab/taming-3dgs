@@ -49,7 +49,7 @@ std::function<float*(size_t N)> resizeFloatFunctional(torch::Tensor& t) {
     return lambda;
 }
 
-std::tuple<int, int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
+std::tuple<int, int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -70,7 +70,8 @@ RasterizeGaussiansCUDA(
 	const int degree,
 	const torch::Tensor& campos,
 	const bool prefiltered,
-	const bool debug)
+	const bool debug,
+	const torch::Tensor& pixel_weights)
 {
   if (means3D.ndimension() != 2 || means3D.size(1) != 3) {
     AT_ERROR("means3D must have dimensions (num_points, 3)");
@@ -97,6 +98,49 @@ RasterizeGaussiansCUDA(
   std::function<char*(size_t)> imgFunc = resizeFunctional(imgBuffer);
   std::function<char*(size_t)> sampleFunc = resizeFunctional(sampleBuffer);
   
+  torch::Tensor xy_d = torch::zeros({P, 2}, means3D.options().dtype(torch::kFloat32));
+  torch::Tensor depths_d = torch::zeros({P}, means3D.options().dtype(torch::kFloat32));
+  torch::Tensor radii_d = torch::zeros({P}, means3D.options().dtype(torch::kInt32));
+
+  torch::Tensor countBuffer = torch::empty({0}, int_opts);
+  torch::Tensor offsetBuffer = torch::empty({0}, int_opts);
+  torch::Tensor listBuffer = torch::empty({0}, int_opts);
+  torch::Tensor listBufferRender = torch::empty({0}, float_opts);
+  torch::Tensor listBufferDistance = torch::empty({0}, float_opts);
+  std::function<int*(size_t)> listFunc = resizeIntFunctional(listBuffer);
+  std::function<float*(size_t)> listFuncRender = resizeFloatFunctional(listBufferRender);
+  std::function<float*(size_t)> listFuncDistance = resizeFloatFunctional(listBufferDistance);
+
+  float* weight_ptr = nullptr;
+  float* accum_weight_ptr = nullptr;
+  int* reverse_count_ptr = nullptr;
+  float* blending_weight_ptr = nullptr;
+  float* dist_accum_ptr = nullptr;
+
+  torch::Tensor accumWeightsBuffer = torch::empty({0}, float_opts);
+  torch::Tensor reverseCount = torch::empty({0}, int_opts);
+  torch::Tensor blendingWeights = torch::empty({0}, float_opts);
+  torch::Tensor distAccum = torch::empty({0}, float_opts);
+  if(pixel_weights.size(0) != 0)
+  {
+	countBuffer = torch::full({H, W}, 0, int_opts);
+	offsetBuffer = torch::full({H, W}, 0, int_opts);
+
+	if(pixel_weights.size(0) > 1)
+	{
+		weight_ptr = pixel_weights.contiguous().data<float>();
+		accumWeightsBuffer = torch::full({P}, 0, float_opts);
+		accum_weight_ptr = accumWeightsBuffer.contiguous().data<float>();
+
+		reverseCount = torch::full({P}, 0, int_opts);
+		reverse_count_ptr = reverseCount.contiguous().data<int>();
+		blendingWeights = torch::full({P}, 0, float_opts);
+		blending_weight_ptr = blendingWeights.contiguous().data<float>();
+		distAccum = torch::full({P}, 0, float_opts);
+		dist_accum_ptr = distAccum.contiguous().data<float>();
+	}
+  }
+  
   int rendered = 0;
   int num_buckets = 0;
   if(P != 0)
@@ -108,10 +152,18 @@ RasterizeGaussiansCUDA(
       }
 
 	  auto tup = CudaRasterizer::Rasterizer::forward(
+		(float2 *)xy_d.contiguous().data_ptr<float>(),
+		depths_d.contiguous().data_ptr<float>(),
+		radii_d.contiguous().data_ptr<int>(),
 	    geomFunc,
 		binningFunc,
 		imgFunc,
 		sampleFunc,
+		listFunc,
+		listFuncRender,
+		listFuncDistance,
+		countBuffer.contiguous().data_ptr<int>(),
+		offsetBuffer.contiguous().data_ptr<int>(),
 	    P, degree, M,
 		background.contiguous().data<float>(),
 		W, H,
@@ -132,12 +184,17 @@ RasterizeGaussiansCUDA(
 		prefiltered,
 		out_color.contiguous().data<float>(),
 		radii.contiguous().data<int>(),
-		debug);
-		
+		debug,
+		weight_ptr,
+		accum_weight_ptr,
+		reverse_count_ptr,
+		blending_weight_ptr,
+		dist_accum_ptr);
+
 		rendered = std::get<0>(tup);
 		num_buckets = std::get<1>(tup);
   }
-  return std::make_tuple(rendered, num_buckets, out_color, radii, geomBuffer, binningBuffer, imgBuffer, sampleBuffer);
+  return std::make_tuple(rendered, num_buckets, out_color, radii, geomBuffer, binningBuffer, imgBuffer, sampleBuffer, offsetBuffer, listBuffer, listBufferRender, listBufferDistance, xy_d, depths_d, radii_d, accumWeightsBuffer, reverseCount, blendingWeights, distAccum);
 }
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>

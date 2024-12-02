@@ -330,10 +330,17 @@ __global__ void set(int N, uint32_t* where, int* space)
 // Forward rendering procedure for differentiable rasterization
 // of Gaussians.
 std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
+	float2* xy_d,
+    float *depths_d,
+	int *radii_d,
 	std::function<char* (size_t)> geometryBuffer,
 	std::function<char* (size_t)> binningBuffer,
 	std::function<char* (size_t)> imageBuffer,
 	std::function<char* (size_t)> sampleBuffer,
+	std::function<int* (size_t)> listBuffer,
+	std::function<float* (size_t)> listBufferRender,
+	std::function<float* (size_t)> listBufferDistance,
+	int* contribCountBuffer, int* contribOffsetBuffer,
 	const int P, int D, int M,
 	const float* background,
 	const int width, int height,
@@ -353,7 +360,12 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 	const bool prefiltered,
 	float* out_color,
 	int* radii,
-	bool debug)
+	bool debug,
+	float* pixel_weights,
+	float* accum_weights,
+	int* reverse_count,
+	float* blend_weights,
+	float* dist_accum)
 {
 	const float focal_y = height / (2.0f * tan_fovy);
 	const float focal_x = width / (2.0f * tan_fovx);
@@ -382,6 +394,7 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 
 	// Run preprocessing per-Gaussian (transformation, bounding, conversion of SHs to RGB)
 	CHECK_CUDA(FORWARD::preprocess(
+		xy_d, depths_d, radii_d,
 		P, D, M,
 		means3D,
 		(glm::vec3*)scales,
@@ -483,7 +496,17 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 		imgState.n_contrib,
 		imgState.max_contrib,
 		background,
-		out_color), debug)
+		out_color,
+		contribCountBuffer,
+		contribOffsetBuffer,
+		imgState.contrib_scan,
+		imgState.scan_size,
+		listBuffer, listBufferRender, listBufferDistance,
+		pixel_weights,
+		accum_weights,
+		reverse_count,
+		blend_weights,
+		dist_accum), debug)
 
 	CHECK_CUDA(cudaMemcpy(imgState.pixel_colors, out_color, sizeof(float) * width * height * NUM_CHAFFELS, cudaMemcpyDeviceToDevice), debug);
 	return std::make_tuple(num_rendered, bucket_sum);
