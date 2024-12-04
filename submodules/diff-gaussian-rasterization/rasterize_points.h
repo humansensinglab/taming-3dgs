@@ -116,15 +116,3 @@ fusedssim(
     torch::Tensor &img1,
     torch::Tensor &img2
 );
-
-torch::Tensor
-fusedssim_backward(
-    float C1,
-    float C2,
-    torch::Tensor &img1,
-    torch::Tensor &img2,
-    torch::Tensor &dL_dmap,
-    torch::Tensor &fac_dL_dmu1,
-    torch::Tensor &fac_dL_dsigma1_sq,
-    torch::Tensor &fac_dL_dsigma12
-);
