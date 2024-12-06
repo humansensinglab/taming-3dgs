@@ -315,7 +315,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[30_000])
     parser.add_argument("--start_checkpoint", type=str, default = None)
     parser.add_argument("--cams", type=int, default=10)
-    parser.add_argument("--budget", type=float, default=0.2)
+    parser.add_argument("--budget", type=float, default=20)
     parser.add_argument("--mode", type=str, default="multiplier", choices=["multiplier", "final_count"])
     parser.add_argument("--websockets", action='store_true', default=False)
     parser.add_argument("--ho_iteration", type=int, default=15000)
