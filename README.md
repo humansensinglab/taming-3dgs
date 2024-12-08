@@ -66,8 +66,6 @@ If you find this repo useful, please cite:
     articleno = {2},
     numpages = {11},
     keywords = {Radiance Fields, Gaussian Splatting},
-    location = {
-    },
     series = {SA '24}
 }
 
