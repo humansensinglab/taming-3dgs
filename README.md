@@ -48,7 +48,9 @@ We provide a basic browser-based renderer to track the training progress. Steps 
 4. Open [render.html](./web_viewer/render.html) in your browser.
 
 ## Note
-The performance optimizations that are drop-in replacements for the original implementation are available under the `rasterizer` branch. All the performance optimizations are released under the MIT License. Please refer to the [Inria repository](https://github.com/graphdeco-inria/gaussian-splatting) for complete instructions.
+The performance optimizations that are **drop-in replacements** for the original implementation are available under the [rasterizer](https://github.com/humansensinglab/taming-3dgs/tree/rasterizer) branch. All the performance optimizations are released under the MIT License. Please refer to the [Inria repository](https://github.com/graphdeco-inria/gaussian-splatting) for complete instructions.
+
+They have also been integrated with the original [Inria repository](https://github.com/graphdeco-inria/gaussian-splatting) so it can be directly used there.
 
 ## Citation
 If you find this repo useful, please cite:
