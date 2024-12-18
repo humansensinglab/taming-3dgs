@@ -9,15 +9,20 @@ Saswat Subhajyoti Mallick*, Rahul Goel*, Bernhard Kerbl, Francisco Vicente Carra
 
 ## BibTeX
 ```
-@inproceedings{taming3dgs,
-    author={{Mallick and Goel} and Kerbl, Bernhard and
-              Vicente Carrasco, Francisco and Steinberger, Markus and De La
-              Torre, Fernando},
-    title={Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
-    booktitle = {SIGGRAPH Asia 2024 Conference Papers},
-    year={2024},
+@inproceedings{10.1145/3680528.3687694,
+    author = {Mallick, Saswat Subhajyoti and Goel, Rahul and Kerbl, Bernhard and Steinberger, Markus and Carrasco, Francisco Vicente and De La Torre, Fernando},
+    title = {Taming 3DGS: High-Quality Radiance Fields with Limited Resources},
+    year = {2024},
+    isbn = {9798400711312},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3680528.3687694},
     doi = {10.1145/3680528.3687694},
-    url = {https://humansensinglab.github.io/taming-3dgs/}
+    booktitle = {SIGGRAPH Asia 2024 Conference Papers},
+    articleno = {2},
+    numpages = {11},
+    keywords = {Radiance Fields, Gaussian Splatting},
+    series = {SA '24}
 }
 ```
 
