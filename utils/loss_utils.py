@@ -65,7 +65,3 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
     else:
         return ssim_map.mean(1).mean(1).mean(1)
 
-
-# def fast_ssim(img1, img2):
-#     ssim_map = FusedSSIMMap.apply(C1, C2, img1, img2)
-#     return ssim_map.mean()
