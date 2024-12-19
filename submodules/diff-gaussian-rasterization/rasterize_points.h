@@ -85,34 +85,3 @@ void adamUpdate(
 	const float eps,
 	const uint32_t N,
 	const uint32_t M);
-
-torch::Tensor ssimrest(
-	float C1, 
-	float C2, 
-	torch::Tensor& mu1, 
-	torch::Tensor& mu2, 
-	torch::Tensor& mim, 
-	torch::Tensor& mom, 
-	torch::Tensor& mu2_sq, 
-	torch::Tensor& sigma2_sq
-);
-
-std::tuple<torch::Tensor, torch::Tensor, torch::Tensor> ssimrest_back(
-	float C1, 
-	float C2, 
-	torch::Tensor& mu1, 
-	torch::Tensor& mu2, 
-	torch::Tensor& mim, 
-	torch::Tensor& mom, 
-	torch::Tensor& mu2_sq, 
-	torch::Tensor& sigma2_sq,
-	torch::Tensor& dL
-);
-
-std::tuple<torch::Tensor,torch::Tensor,torch::Tensor,torch::Tensor>
-fusedssim(
-    float C1,
-    float C2,
-    torch::Tensor &img1,
-    torch::Tensor &img2
-);
