@@ -26,7 +26,6 @@ setup(
             "cuda_rasterizer/backward.cu",
             "cuda_rasterizer/adam.cu",
             "rasterize_points.cu",
-            "conv.cu",
             "ext.cpp"],
             extra_compile_args={"nvcc": ["-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), "third_party/glm/")]})
         ],

@@ -14,7 +14,7 @@ import numpy as np
 import os, random, time
 from random import randint
 from lpipsPyTorch import lpips
-from utils.loss_utils import l1_loss#, fast_ssim
+from utils.loss_utils import l1_loss
 from fused_ssim import fused_ssim as fast_ssim
 from gaussian_renderer import render, network_gui_ws
 import sys
