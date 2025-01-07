@@ -53,11 +53,9 @@ class GaussianModel:
 
     def modify_functions(self):
         old_opacities = self.get_opacity.clone()
-        optimizable_tensors = self.replace_tensor_to_optimizer(old_opacities, "opacity")
-        self._opacity = optimizable_tensors["opacity"]
-                
         self.opacity_activation = torch.abs
         self.inverse_opacity_activation = identity_gate
+        self._opacity = self.opacity_activation(old_opacities)
 
     def __init__(self, sh_degree, optimizer_type="default", rendering_mode=None):
         self.active_sh_degree = 0
