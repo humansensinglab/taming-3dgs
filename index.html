@@ -40,6 +40,11 @@
     <script src="js/clipboard.min.js"></script>
     <script src="js/video_comparison.js"></script>
     <script src="js/app.js"></script>
+
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+
 </head>
 
 <body>
@@ -235,6 +240,22 @@
                 border: none;
             }
         </style>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Erratum
+                </h3>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <p class="text-justify">
+                        An error was identified in Equation 2 of our paper, as reported on the github repository <a href="https://github.com/humansensinglab/taming-3dgs/issues/9">(issue)</a>. We deeply regret this oversight and appreciate the user's effort in bringing it to our attention. The corrected equation is: \[
+                        A(x) = \frac{B-S-kN}{N^2}x^2 + kx + S; \quad k=\frac{2(B - S)}{N}
+                        \]
+                        This correction does not impact the paper's main results or conclusions. We appreciate the community's contributions to improving this work.
+                    </p>
+                </div>
+            </div>
+        </div>
 
         <div class="row">
             <div class="col-md-8 col-md-offset-2">
