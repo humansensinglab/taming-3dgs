@@ -67,16 +67,16 @@ def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
             colmap_id=None,
             R=C2W[:3, :3].transpose(),
             T=C2W[:3, 3],
-            FoVx=focal2fov(np.array(cam_info["fx"]), cam_info["width"]),
-            FoVy=focal2fov(np.array(cam_info["fy"]), cam_info["height"]),
+            FoVx=focal2fov(np.array(cam_info["fx"]), cam_info["intr_width"]),
+            FoVy=focal2fov(np.array(cam_info["fy"]), cam_info["intr_height"]),
             image=None,
             gt_alpha_mask=None,
             image_name=None,
             uid=None,
             data_device=args.data_device,
         )
-        camera.image_width = cam_info["width"]
-        camera.image_height = cam_info["height"]
+        camera.image_width = cam_info["target_width"]
+        camera.image_height = cam_info["target_height"]
         render_one(args.save_path, camera, gaussians, pipeline, background)
 
 
