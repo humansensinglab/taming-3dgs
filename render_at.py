@@ -52,8 +52,11 @@ def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
-        with open(args.camera, 'r') as f:
-            cam_info = json.load(f)
+        if isinstance(args.camera, str) and args.camera.endswith('.json'):
+            with open(args.camera, 'r') as f:
+                cam_info = json.load(f)
+        else:
+            cam_info = args.camera
 
         W2C_rot = np.array(cam_info["rotation"])
         W2C_pos = np.array(cam_info["position"])
