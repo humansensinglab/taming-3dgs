@@ -43,10 +43,14 @@ def render_one(save_path, view, gaussians, pipeline, background):
     rendering = render(view, gaussians, pipeline, background)["render"]
     torchvision.utils.save_image(rendering, save_path)
 
+
 @torch.no_grad()
 def render_at_camera(args, gaussians, background, pipeline: PipelineParams):
-    with open(args.camera, 'r') as f:
-        cam_info = json.load(f)
+    if isinstance(args.camera, str) and args.camera.endswith('.json'):
+        with open(args.camera, 'r') as f:
+            cam_info = json.load(f)
+    else:
+        cam_info = args.camera
 
     W2C_rot = np.array(cam_info["rotation"])
     W2C_pos = np.array(cam_info["position"])
@@ -72,6 +76,7 @@ def render_at_camera(args, gaussians, background, pipeline: PipelineParams):
     camera.image_height = cam_info["target_height"]
     render_one(args.save_path, camera, gaussians, pipeline, background)
 
+
 def load_gaussians(args, dataset: ModelParams):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree, optimizer_type="default", rendering_mode="abs")
@@ -81,7 +86,6 @@ def load_gaussians(args, dataset: ModelParams):
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
     return gaussians, background
-
 
 
 if __name__ == "__main__":
