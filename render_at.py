@@ -43,15 +43,8 @@ def render_one(save_path, view, gaussians, pipeline, background):
     rendering = render(view, gaussians, pipeline, background)["render"]
     torchvision.utils.save_image(rendering, save_path)
 
-
-def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
-    with torch.no_grad():
-        gaussians = GaussianModel(dataset.sh_degree, optimizer_type="default", rendering_mode="abs")
-        gaussians.load_ply(os.path.join(args.gs_path))
-
-        bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
-        background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
-
+@torch.no_grad()
+def render_at_camera(args, gaussians, background, pipeline: PipelineParams):
         with open(args.camera, 'r') as f:
             cam_info = json.load(f)
 
@@ -79,6 +72,17 @@ def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
         camera.image_height = cam_info["target_height"]
         render_one(args.save_path, camera, gaussians, pipeline, background)
 
+def load_gaussians(args, dataset: ModelParams):
+    with torch.no_grad():
+        gaussians = GaussianModel(dataset.sh_degree, optimizer_type="default", rendering_mode="abs")
+        gaussians.load_ply(os.path.join(args.gs_path))
+
+        bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
+        background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+
+    return gaussians, background
+
+
 
 if __name__ == "__main__":
     # Set up command line argument parser
@@ -99,4 +103,7 @@ if __name__ == "__main__":
     # Initialize system state (RNG)
     safe_state(args.quiet)
     model.white_background = False
-    render_sets(model, pipeline.extract(args), args)
+
+    gaussians, background = load_gaussians(args, model)
+
+    render_at_camera(args, gaussians, background, pipeline.extract(args))
