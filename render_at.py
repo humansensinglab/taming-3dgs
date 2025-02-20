@@ -44,7 +44,40 @@ def render_one(save_path, view, gaussians, pipeline, background):
     torchvision.utils.save_image(rendering, save_path)
 
 
-def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
+@torch.no_grad()
+def render_at_camera(args, gaussians, background, pipeline: PipelineParams):
+    if isinstance(args.camera, str) and args.camera.endswith('.json'):
+        with open(args.camera, 'r') as f:
+            cam_info = json.load(f)
+    else:
+        cam_info = args.camera
+
+    W2C_rot = np.array(cam_info["rotation"])
+    W2C_pos = np.array(cam_info["position"])
+    W2C = np.zeros((4, 4))
+    W2C[:3,:3] = W2C_rot
+    W2C[:3, 3] = W2C_pos
+    W2C[3, 3] = 1.0
+    C2W = np.linalg.inv(W2C)
+
+    camera = Camera(
+        colmap_id=None,
+        R=C2W[:3, :3].transpose(),
+        T=C2W[:3, 3],
+        FoVx=focal2fov(np.array(cam_info["fx"]), cam_info["intr_width"]),
+        FoVy=focal2fov(np.array(cam_info["fy"]), cam_info["intr_height"]),
+        image=None,
+        gt_alpha_mask=None,
+        image_name=None,
+        uid=None,
+        data_device=args.data_device,
+    )
+    camera.image_width = cam_info["target_width"]
+    camera.image_height = cam_info["target_height"]
+    render_one(args.save_path, camera, gaussians, pipeline, background)
+
+
+def load_gaussians(args, dataset: ModelParams):
     with torch.no_grad():
         gaussians = GaussianModel(dataset.sh_degree, optimizer_type="default", rendering_mode="abs")
         gaussians.load_ply(os.path.join(args.gs_path))
@@ -52,35 +85,7 @@ def render_sets(dataset: ModelParams, pipeline: PipelineParams, args):
         bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
         background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
 
-        if isinstance(args.camera, str) and args.camera.endswith('.json'):
-            with open(args.camera, 'r') as f:
-                cam_info = json.load(f)
-        else:
-            cam_info = args.camera
-
-        W2C_rot = np.array(cam_info["rotation"])
-        W2C_pos = np.array(cam_info["position"])
-        W2C = np.zeros((4, 4))
-        W2C[:3,:3] = W2C_rot
-        W2C[:3, 3] = W2C_pos
-        W2C[3, 3] = 1.0
-        C2W = np.linalg.inv(W2C)
-
-        camera = Camera(
-            colmap_id=None,
-            R=C2W[:3, :3].transpose(),
-            T=C2W[:3, 3],
-            FoVx=focal2fov(np.array(cam_info["fx"]), cam_info["intr_width"]),
-            FoVy=focal2fov(np.array(cam_info["fy"]), cam_info["intr_height"]),
-            image=None,
-            gt_alpha_mask=None,
-            image_name=None,
-            uid=None,
-            data_device=args.data_device,
-        )
-        camera.image_width = cam_info["target_width"]
-        camera.image_height = cam_info["target_height"]
-        render_one(args.save_path, camera, gaussians, pipeline, background)
+    return gaussians, background
 
 
 if __name__ == "__main__":
@@ -102,4 +107,7 @@ if __name__ == "__main__":
     # Initialize system state (RNG)
     safe_state(args.quiet)
     model.white_background = False
-    render_sets(model, pipeline.extract(args), args)
+
+    gaussians, background = load_gaussians(args, model)
+
+    render_at_camera(args, gaussians, background, pipeline.extract(args))
