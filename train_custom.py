@@ -29,10 +29,11 @@ from utils.taming_utils import compute_gaussian_score, get_edges, get_count_arra
 from utils.misc import score_coefficients
 
 
-def training(dataset, opt, pipe, saving_iterations, checkpoint_iterations, checkpoint, score_coefficients, args):
+def training(dataset, opt, pipe, saving_iterations, checkpoint_iterations, checkpoint, score_coefficients, args,
+             callback_func):
     first_iter = 0
     densify_iter_num = 0
-    prepare_output_and_logger(dataset)
+    prepare_output_and_logger(dataset, args.job_id)
     gaussians = GaussianModel(dataset.sh_degree, opt.optimizer_type)
     scene = Scene(dataset, gaussians)
     gaussians.training_setup(opt)
@@ -108,6 +109,7 @@ def training(dataset, opt, pipe, saving_iterations, checkpoint_iterations, check
                 progress_bar.close()
 
             # Log and save
+            callback_func(gaussians, iteration)
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -187,11 +189,14 @@ def training(dataset, opt, pipe, saving_iterations, checkpoint_iterations, check
     scene.save(iteration)
     print(f"Time taken by {os.getenv('OAR_JOB_ID')}: {end - start}s")
 
+    # All done
+    print("\nTraining complete.")
 
-def prepare_output_and_logger(args):
+
+def prepare_output_and_logger(args, job_id=None):
     if not args.model_path:
-        if os.getenv('OAR_JOB_ID'):
-            unique_str = os.getenv('OAR_JOB_ID')
+        if job_id is not None:
+            unique_str = job_id
         else:
             unique_str = str(uuid.uuid4())
         args.model_path = os.path.join("./output/", unique_str)
@@ -213,31 +218,26 @@ if __name__ == "__main__":
     # parser.add_argument('--port', type=int, default=6009)
     # parser.add_argument('--debug_from', type=int, default=-1)
     # parser.add_argument("--test_iterations", nargs="+", type=int, default=[7_000, 30_000])
-    parser.add_argument("--save_iterations", nargs="+", type=int, default=[7_000, 30_000])
+    parser.add_argument("--save_iterations", nargs="+", type=int, default=[])
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[30_000])
+    parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default=None)
     parser.add_argument("--cams", type=int, default=10)
     parser.add_argument("--budget", type=float, default=20)
     parser.add_argument("--mode", type=str, default="multiplier", choices=["multiplier", "final_count"])
     parser.add_argument("--ho_iteration", type=int, default=15000)
+    parser.add_argument("--job_id", type=str, default=None)
     parser.add_argument("--sh_lower", action='store_true', default=False)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
-
     print("Optimizing " + args.model_path)
-
     # Initialize system state (RNG)
     safe_state(args.quiet)
-
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
-    def saving_function():
+    def callback_function(gaussians, iteration):
         pass
 
     training(lp.extract(args), op.extract(args), pp.extract(args), args.save_iterations, args.checkpoint_iterations,
-             args.start_checkpoint, score_coefficients, args)
-
-    # All done
-    print("\nTraining complete.")
+             args.start_checkpoint, score_coefficients, args, callback_function)
