@@ -11,12 +11,13 @@ def get_edges(image):
     image_gray = image_pil.convert('L')
     image_edges = image_gray.filter(ImageFilter.FIND_EDGES)
     image_edges_tensor = transforms.ToTensor()(image_edges)
-    
+
     return image_edges_tensor
+
 
 def get_loss_map(reconstructed_image, original_image, config, edges_loss_norm):
     weights = [config["mse_importance"], config["edge_importance"]]
-    
+
     l1_loss = torch.mean(torch.abs(reconstructed_image - original_image), 0).detach()
     l1_loss_norm = (l1_loss - torch.min(l1_loss)) / (torch.max(l1_loss) - torch.min(l1_loss))
 
@@ -24,6 +25,7 @@ def get_loss_map(reconstructed_image, original_image, config, edges_loss_norm):
                 (weights[1] * edges_loss_norm)
 
     return final_loss
+
 
 def normalize(config_value, value_tensor):
     multiplier = config_value
@@ -36,6 +38,7 @@ def normalize(config_value, value_tensor):
     ret_value[valid_indices] = multiplier * (valid_value / torch.median(valid_value))
 
     return ret_value
+
 
 def compute_gaussian_score(scene, camlist, edge_losses, gaussians, pipe, bg, importance_values, opt, to_prune=False):
     config = importance_values
@@ -58,7 +61,7 @@ def compute_gaussian_score(scene, camlist, edge_losses, gaussians, pipe, bg, imp
         gt_image = my_viewpoint_cam.original_image.cuda()
         pixel_weights = get_loss_map(render_image, gt_image, config, edge_losses[view].cuda())
 
-        render_pkg = render(my_viewpoint_cam, gaussians, pipe, bg, pixel_weights = pixel_weights)
+        render_pkg = render(my_viewpoint_cam, gaussians, pipe, bg, pixel_weights=pixel_weights)
 
         loss_accum = render_pkg["accum_weights"]
         dist_accum = render_pkg["accum_dist"]
@@ -76,7 +79,7 @@ def compute_gaussian_score(scene, camlist, edge_losses, gaussians, pipe, bg, imp
             normalize(config["dept_importance"], all_depths) + \
             normalize(config["radii_importance"], all_radii) + \
             normalize(config["scale_importance"], all_scales) )
-        
+
         p_importance = (
                         normalize(config["dist_importance"], dist_accum) + \
                         normalize(config["loss_importance"], loss_accum) + \
@@ -86,8 +89,8 @@ def compute_gaussian_score(scene, camlist, edge_losses, gaussians, pipe, bg, imp
 
         agg_importance = config["view_importance"] * photometric_loss * (p_importance + g_importance)
         gaussian_importance[view][visibility_filter] = agg_importance[visibility_filter]
-    
-    gaussian_importance = gaussian_importance.sum(axis = 0)
+
+    gaussian_importance = gaussian_importance.sum(axis=0)
     return gaussian_importance
 
 
@@ -97,21 +100,22 @@ def compute_photometric_loss(viewpoint_cam, image):
     loss = (1.0 - 0.2) * Ll1 + 0.2 * (1.0 - fast_ssim(image.unsqueeze(0), gt_image.unsqueeze(0)))
     return loss
 
+
 def get_count_array(start_count, multiplier, opt, mode):
     # Eq. (2) of taming-3dgs
     if mode == "multiplier":
         budget = int(start_count * float(multiplier))
     elif mode == "final_count":
         budget = multiplier
-    
+
     num_steps = ((opt.densify_until_iter - opt.densify_from_iter) // opt.densification_interval)
     slope_lower_bound = (budget - start_count) / num_steps
 
     k = 2 * slope_lower_bound
-    a = (budget - start_count - k*num_steps) / (num_steps*num_steps)
+    a = (budget - start_count - k * num_steps) / (num_steps * num_steps)
     b = k
     c = start_count
 
-    values = [int(1*a * (x**2) + (b * x) + c) for x in range(num_steps)]
+    values = [int(1 * a * (x**2) + (b * x) + c) for x in range(num_steps)]
 
     return values
