@@ -1,0 +1,140 @@
+# 使用 NVIDIA CUDA 基础镜像
+FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
+
+# 避免交互式配置
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 设置 CUDA 架构
+ENV TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6"
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
+    python3.7 \
+    python3.7-dev \
+    python3.7-distutils \
+    python3-pip \
+    git \
+    wget \
+    cmake \
+    ninja-build \
+    build-essential \
+    # COLMAP 官方推荐的依赖
+    libboost-program-options-dev \
+    libboost-filesystem-dev \
+    libboost-graph-dev \
+    libboost-system-dev \
+    libboost-test-dev \
+    libeigen3-dev \
+    libflann-dev \
+    libfreeimage-dev \
+    libmetis-dev \
+    libgoogle-glog-dev \
+    libgtest-dev \
+    libgmock-dev \
+    libsqlite3-dev \
+    libglew-dev \
+    qtbase5-dev \
+    libqt5opengl5-dev \
+    libcgal-dev \
+    libceres-dev \
+    # 其他原有依赖
+    libgtk-3-dev \
+    libopencv-dev \
+    libglfw3-dev \
+    libavdevice-dev \
+    libavcodec-dev \
+    libxxf86vm-dev \
+    libembree-dev \
+    unzip \
+    xvfb \
+    # 添加 AWS CLI 所需的依赖
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 CUDA 工具包
+RUN apt-get update && apt-get install -y \
+    nvidia-cuda-toolkit \
+    nvidia-cuda-toolkit-gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# 编译支持 GPU 的 COLMAP
+RUN cd /tmp && \
+    git clone https://github.com/colmap/colmap.git && \
+    cd colmap && \
+    # 切换到稳定版本 3.8
+    git checkout 3.8 && \
+    mkdir build && \
+    cd build && \
+    cmake .. \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCUDA_ENABLED=ON \
+        -DTESTS_ENABLED=OFF \
+        -DCMAKE_CUDA_ARCHITECTURES="60;61;70;75;80;86" \
+        -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
+        -DFLANN_INCLUDE_DIR=/usr/include \
+        -DFLANN_LIBRARY=/usr/lib/x86_64-linux-gnu/libflann.so && \
+    ninja && \
+    ninja install && \
+    cd / && \
+    rm -rf /tmp/colmap
+
+# 设置 Python 3.7 为默认版本
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
+
+# 安装 pip for Python 3.7
+RUN wget https://bootstrap.pypa.io/pip/3.7/get-pip.py && \
+    python3.7 get-pip.py && \
+    rm get-pip.py
+
+# 创建并激活 Conda 环境
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
+    && bash miniconda.sh -b -p /opt/conda \
+    && rm miniconda.sh
+
+ENV PATH="/opt/conda/bin:${PATH}"
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制 AWS 配置文件到容器中
+COPY aws /root/.aws
+RUN chmod 600 /root/.aws/credentials
+
+# 复制所有源代码文件
+COPY . /app/
+
+# 创建基础 conda 环境并安装 PyTorch
+RUN conda create -n taming_3dgs python=3.7.13 && \
+    conda install -n taming_3dgs pytorch=1.12.1 torchvision=0.13.1 torchaudio=0.12.1 cudatoolkit=11.6 ninja -c pytorch -c conda-forge
+
+# 激活环境并安装其他依赖
+SHELL ["/bin/bash", "-c"]
+RUN source /opt/conda/etc/profile.d/conda.sh && \
+    conda activate taming_3dgs && \
+    export CUDA_HOME=/usr/local/cuda && \
+    export PATH=$CUDA_HOME/bin:$PATH && \
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH && \
+    export TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6" && \
+    conda env update -f environment.yml
+
+
+# 在 Dockerfile 中添加环境变量设置
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV PYTHONPATH=/app
+
+RUN chmod +x /app/run_custom.sh
+
+# 安装 AWS CLI v2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf aws awscliv2.zip
+
+# 设置入口点
+ENTRYPOINT ["/app/run_custom.sh"]
+

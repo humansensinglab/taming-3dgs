@@ -1,0 +1,80 @@
+name: Build Model Gen Job Docker Image
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: frolic-ai/model-gen-job
+  IMAGE_TAG: ${{ github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_V2 }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_V2 }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Download config from S3
+      run: |
+        mkdir -p configs
+        aws s3 cp s3://future-gadgets-service-confs/backend/model-gen-job/.aws aws
+
+    - name: Build and push image to ECR
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+        platforms: linux/amd64
+
+    - name: Notify Feishu
+      if: always()
+      run: |
+        STATUS="${{ job.status }}"
+        COLOR=$([ "$STATUS" == "success" ] && echo "green" || echo "red")
+        ICON=$([ "$STATUS" == "success" ] && echo "🚀" || echo "⚠️")
+        STATUS_TEXT=$([ "$STATUS" == "success" ] && echo "成功" || echo "失败")
+        
+        # 转义提交信息中的特殊字符
+        COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | tr '\n' ' ')
+        
+        curl -X POST -H "Content-Type: application/json" \
+        -d "{
+          \"msg_type\": \"interactive\",
+          \"card\": {
+            \"header\": {
+              \"title\": {
+                \"tag\": \"plain_text\",
+                \"content\": \"${ICON} Build Model Gen Job Docker Image ${STATUS_TEXT}\"
+              },
+              \"template\": \"${COLOR}\"
+            },
+            \"elements\": [
+              {
+                \"tag\": \"div\",
+                \"text\": {
+                  \"tag\": \"lark_md\",
+                  \"content\": \"$([ "$STATUS" == "success" ] && echo "✅" || echo "❌") **Build状态**：${STATUS_TEXT}\\n🌍 **环境**：测试环境\\n📦 **仓库**：[${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})\\n🔀 **分支**：${{ github.ref_name }}\\n📝 **提交**：[${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})\\n👤 **触发者**：${{ github.actor }}\\n\\n📝 **提交信息**：${COMMIT_MESSAGE}\"
+                }
+              }
+            ]
+          }
+        }" ${{ secrets.FEISHU_WEBHOOK_URL }}
