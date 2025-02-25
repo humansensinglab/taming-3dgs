@@ -224,7 +224,7 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default=None)
     parser.add_argument("--cams", type=int, default=10)
-    parser.add_argument("--budget", type=float, default=20)
+    parser.add_argument("--budget", type=float, default=15)  # 20
     parser.add_argument("--mode", type=str, default="multiplier", choices=["multiplier", "final_count"])
     parser.add_argument("--ho_iteration", type=int, default=15000)
     parser.add_argument("--job_id", type=str, default=None)
@@ -232,6 +232,8 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
     print("Optimizing " + args.model_path)
+    args.sh_lower = True
+    op.densification_interval = 500
     # Initialize system state (RNG)
     safe_state(args.quiet)
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
