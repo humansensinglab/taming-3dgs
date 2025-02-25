@@ -239,7 +239,7 @@ if __name__ == "__main__":
     torch.autograd.set_detect_anomaly(args.detect_anomaly)
 
     def callback_function(gaussians, iteration):
-        # gaussians.save(save_ply_path)
+        # gaussians.save_ply(save_ply_path)
         pass
 
     training(lp.extract(args), op.extract(args), pp.extract(args), args.save_iterations, args.checkpoint_iterations,
