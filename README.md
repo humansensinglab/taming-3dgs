@@ -38,7 +38,23 @@ Follow the instructions in the [original 3DGS repository](https://github.com/gra
 </details>
 <br>
 
-To reproduce the scores in our paper, please run `train.sh`
+## Reproducibility
+
+Our experiments were carried out on a machine with 24 vCPUs, 512GB RAM and 1xNvidia RTX A4500 20G GPU. For reproducing the results reported in our paper, please run the following scripts from the project root:
+```bash
+# MODE={budget|big}
+python full_eval.py \
+    -m360 <MipNeRF360 dataset path> \
+    -tat <TanksAndTemples dataset path> \
+    -db <DeepBlending dataset path> \
+    --sh_lower \
+    --mode ${MODE}
+```
+
+* `MODE=budget`: results on budgeted setting [reported as **Ours** in the paper]
+* `MODE=big`   : results on unconstrained setting [reported as **Ours(Big)** in the paper]
+
+Add `--dry_run` to print the commands without executing them. The `train.sh` has a compiled list of scripts for evaluation.
 
 ## Web viewer
 We provide a basic browser-based renderer to track the training progress. Steps for usage are as follows: <br>
