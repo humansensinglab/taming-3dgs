@@ -286,6 +286,7 @@ renderCUDA(
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	uint32_t* __restrict__ max_contrib,
+	float* __restrict__ pixel_colors,
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	int* __restrict__ count_contrib,
@@ -423,7 +424,10 @@ renderCUDA(
 		final_T[pix_id] = T;
 		n_contrib[pix_id] = last_contributor;
 		for (int ch = 0; ch < CHANNELS; ch++)
+		{
+			pixel_colors[ch * H * W + pix_id] = C[ch];
 			out_color[ch * H * W + pix_id] = C[ch] + T * bg_color[ch];
+		}
 
 		if(count_contrib)
 			count_contrib[pix_id] = contribs;
@@ -452,6 +456,7 @@ void FORWARD::render(
 	float* final_T,
 	uint32_t* n_contrib,
 	uint32_t* max_contrib,
+	float* pixel_colors,
 	const float* bg_color,
 	float* out_color,
 	int* img_contrib_counts,
@@ -479,6 +484,7 @@ void FORWARD::render(
 		final_T,
 		n_contrib,
 		max_contrib,
+		pixel_colors,
 		bg_color,
 		out_color,
 		img_contrib_counts,
