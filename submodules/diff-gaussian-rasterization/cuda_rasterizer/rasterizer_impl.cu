@@ -495,6 +495,7 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 		imgState.accum_alpha,
 		imgState.n_contrib,
 		imgState.max_contrib,
+		imgState.pixel_colors,
 		background,
 		out_color,
 		contribCountBuffer,
@@ -508,7 +509,6 @@ std::tuple<int,int> CudaRasterizer::Rasterizer::forward(
 		blend_weights,
 		dist_accum), debug)
 
-	CHECK_CUDA(cudaMemcpy(imgState.pixel_colors, out_color, sizeof(float) * width * height * NUM_CHAFFELS, cudaMemcpyDeviceToDevice), debug);
 	return std::make_tuple(num_rendered, bucket_sum);
 }
 
